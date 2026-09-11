@@ -29,8 +29,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Test
-        run: npm test
+      - name: Diagnose test run
+        run: |
+          tsc && node scripts/copy-assets.mjs
+          echo "===== node $(node -v) / tsc $(npx tsc --version)"
+          echo "===== dist:"; ls -la dist
+          echo "===== dist/test:"; ls -la dist/test
+          node --test dist/test
 
       # Rebuilds the irdb/lirc indexes from upstream on every deploy so the
       # shipped data stays current. Both scripts are make-like and skip work
