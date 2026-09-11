@@ -2,4 +2,5 @@ node_modules/
 dist/
 .cache/
 *.log
+!test/fixtures/*.log
 .DS_Store
