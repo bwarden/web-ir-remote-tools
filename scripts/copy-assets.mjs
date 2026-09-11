@@ -8,4 +8,6 @@ if (existsSync('index.html')) copyFileSync('index.html', 'dist/index.html');
 copyFileSync('src/style.css', 'dist/src/style.css');
 mkdirSync('dist/test/fixtures', { recursive: true });
 cpSync('test/fixtures', 'dist/test/fixtures', { recursive: true });
+mkdirSync('dist/samples', { recursive: true });
+cpSync('samples', 'dist/samples', { recursive: true });
 console.log('Copied static assets into dist/');

@@ -31,8 +31,8 @@ This runs `tsc`, then:
    built from this mirror because it is also what the app fetches individual
    remotes from at runtime via the jsDelivr CDN, so indexed paths always match
    what is served.
-3. `scripts/copy-assets.mjs` — copies `index.html`, CSS, and test fixtures
-   into `dist/`
+3. `scripts/copy-assets.mjs` — copies `index.html`, CSS, test fixtures, and
+   the sample code tables into `dist/`
 
 Both index scripts are make-like: sources are cached under `.cache/` and an
 index is only rebuilt when the upstream commit or indexer schema changes.

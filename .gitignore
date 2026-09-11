@@ -3,4 +3,5 @@ dist/
 .cache/
 *.log
 !test/fixtures/*.log
+!samples/*.log
 .DS_Store
