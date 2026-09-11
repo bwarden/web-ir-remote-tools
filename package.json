@@ -4,6 +4,7 @@
   "description": "Browser-based IR remote code tools: IRDB lookup and IR format conversion on GitHub Pages",
   "type": "module",
   "private": true,
+  "license": "GPL-2.0",
   "scripts": {
     "build": "tsc && node scripts/build-index.mjs && node scripts/build-lirc-index.mjs && node scripts/copy-assets.mjs",
     "index": "tsc && node scripts/build-index.mjs && node scripts/build-lirc-index.mjs",
