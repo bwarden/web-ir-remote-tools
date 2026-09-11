@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IR Remote Tools</title>
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="app-title">
+    <h1>IR Remote Tools</h1>
+    <p>Look up remotes in IRDB and LIRC, decode captures, and export as HAIR wig</p>
+  </div>
+  <div class="header-row">
+    <nav id="tabs" class="tabs">
+      <button data-tab="browse" class="tab-btn active">Browse Databases</button>
+      <button data-tab="capture" class="tab-btn">Find by capture</button>
+    </nav>
+    <div class="load-tools">
+      <span class="muted">Open:</span>
+      <button id="load-wig-btn" type="button">wig file…</button>
+      <button id="load-csv-btn" type="button">CSV file…</button>
+      <input id="load-wig-input" type="file" accept="application/json,.wig.json,.json" class="hidden">
+      <input id="load-csv-input" type="file" accept=".csv,text/csv" class="hidden">
+    </div>
+  </div>
+</header>
+
+<main class="app-main">
+  <section id="tab-browse" class="tab" hidden></section>
+  <section id="tab-capture" class="tab" hidden></section>
+</main>
+
+<aside id="remote-panel" class="remote-panel" hidden></aside>
+
+<footer class="app-footer">
+  <p>Powered by <a href="https://github.com/probonopd/irdb" target="_blank" rel="noopener">IRDB</a>,
+  <a href="https://github.com/probonopd/lirc-remotes" target="_blank" rel="noopener">lirc-remotes</a>, and
+  <a href="https://github.com/DAB-LABS/HAIR" target="_blank" rel="noopener">HAIR</a>. All conversion runs locally in your browser.</p>
+  <p class="attribution">Remote codes from <a href="https://github.com/probonopd/irdb" target="_blank" rel="noopener">irdb</a> by Simon Peter and contributors, used under permission.
+  Know a remote that is missing? The database is community-maintained &mdash;
+  <a href="https://github.com/probonopd/irdb#contributing" target="_blank" rel="noopener">add a CSV via a GitHub pull request</a>.</p>
+  <p class="attribution">Remote codes from the <a href="https://github.com/probonopd/lirc-remotes" target="_blank" rel="noopener">lirc-remotes</a> mirror by probonopd (originally from <a href="https://sourceforge.net/projects/lirc-remotes" target="_blank" rel="noopener">sourceforge.net/projects/lirc-remotes</a>).</p>
+</footer>
+
+<script type="module" src="src/ui/app.js"></script>
+</body>
+</html>
