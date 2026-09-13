@@ -18,7 +18,7 @@ import {
   type LircIndex,
   type IndexEntry,
 } from './store.js';
-import { el, clear, copyText, intOrUndefined, protocolNames } from './util.js';
+import { el, clear, copyButton, copyText, intOrUndefined, protocolNames } from './util.js';
 
 function codeDataHex(code: IRCode): string {
   if (code.data === undefined) return '';
@@ -323,7 +323,10 @@ export function initCaptureTab(
     if (pronto) {
       const details = el('details', { class: 'pronto' },
         el('summary', { text: 'show Pronto hex' }),
-        el('code', { class: 'pronto-hex', text: pronto }),
+        el('div', { class: 'pronto-body' },
+          copyButton(pronto),
+          el('code', { class: 'pronto-hex', text: pronto }),
+        ),
       );
       actionBox.append(details);
     }

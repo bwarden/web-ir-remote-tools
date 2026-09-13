@@ -6,7 +6,7 @@
 
 import { IRCode, bitReverseBytes, dataHex, toHex } from '../lib/code.js';
 import { Converter } from '../lib/converter.js';
-import { el, clear, copyText, downloadText, fmtInt, intOrUndefined, slugify } from './util.js';
+import { el, clear, copyButton, copyText, downloadText, fmtInt, intOrUndefined, slugify } from './util.js';
 import { fetchIrdbDevice, parseDevicePath } from './store.js';
 
 // wig top-level keys the editor represents itself; everything else on import
@@ -514,7 +514,10 @@ export class RemoteController {
     if (this.showProntoAll) details.open = true;
     details.append(
       el('summary', { text: 'show' }),
-      el('code', { class: 'pronto-hex', text: pronto }),
+      el('div', { class: 'pronto-body' },
+        copyButton(pronto),
+        el('code', { class: 'pronto-hex', text: pronto }),
+      ),
     );
     prontoCell.append(details);
   }

@@ -74,3 +74,18 @@ export function copyText(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
   return Promise.reject(new Error('Clipboard not available'));
 }
+
+// A small button that copies `text` to the clipboard and flips its label to
+// "Copied" briefly so the feedback stays in place for each copied control.
+export function copyButton(text: string, label = 'Copy'): HTMLButtonElement {
+  const btn = el('button', { type: 'button', class: 'copy-btn', text: label });
+  btn.addEventListener('click', () => {
+    copyText(text)
+      .then(() => {
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = label; }, 1200);
+      })
+      .catch((e) => alert(`Could not copy: ${(e as Error).message}`));
+  });
+  return btn;
+}

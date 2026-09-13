@@ -233,7 +233,9 @@ select.cell-edit { font: inherit; }
 
 details.pronto { font-size: 12px; }
 details.pronto summary { cursor: pointer; color: var(--accent); }
-details.pronto .pronto-hex { font-family: var(--mono); font-size: 11px; word-break: break-all; }
+details.pronto .pronto-body { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
+details.pronto .pronto-hex { font-family: var(--mono); font-size: 11px; word-break: break-all; user-select: all; }
+details.pronto .copy-btn { flex: none; padding: 2px 8px; font-size: 11px; }
 
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; align-items: center; }
 
