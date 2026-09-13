@@ -1,4 +1,5 @@
 import { mkdirSync, copyFileSync, cpSync, existsSync } from 'node:fs';
+import './write-version.mjs';
 
 mkdirSync('dist', { recursive: true });
 mkdirSync('dist/src', { recursive: true });

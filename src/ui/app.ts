@@ -6,6 +6,7 @@ import { Converter } from '../lib/converter.js';
 import { RemoteController } from './remote.js';
 import { initBrowseTab } from './browse.js';
 import { initCaptureTab } from './capture.js';
+import { el } from './util.js';
 
 const converter = new Converter();
 
@@ -50,3 +51,22 @@ for (const btn of tabBtns) {
 }
 
 activate('browse');
+
+// Footer version line: dist/version.json carries the package version, git
+// identity, and build time from scripts/write-version.mjs. Best-effort — a
+// missing file (raw tsc output) simply leaves the footer unchanged.
+async function renderVersion(): Promise<void> {
+  const footer = document.querySelector('.app-footer');
+  if (!footer) return;
+  try {
+    const res = await fetch('version.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const v = await res.json();
+    const parts = [String(v.version ?? ''), v.git && `git ${v.git}`, v.builtAt && `built ${v.builtAt}`]
+      .filter((p): p is string => Boolean(p));
+    footer.append(el('p', { class: 'app-version', text: `Version ${parts.join(' · ')}` }));
+  } catch {
+    // version display is best-effort
+  }
+}
+void renderVersion();

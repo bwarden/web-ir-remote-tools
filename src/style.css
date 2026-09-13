@@ -301,4 +301,9 @@ dialog select { width: 100%; }
   font-size: 12px;
   line-height: 1.5;
 }
+.app-footer .app-version {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: .8;
+}
 .attribution { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
