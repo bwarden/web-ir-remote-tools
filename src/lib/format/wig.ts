@@ -12,6 +12,7 @@
 
 import { IRCode } from '../code.js';
 import type { Converter } from '../converter.js';
+import { GcFormat } from './gc.js';
 
 export const WIG_FORMAT_VERSION = 'hair-wig/3';
 
@@ -182,6 +183,13 @@ export class WigFormat {
     if (text.length > MAX_BYTES) reasons.push('file: exceeds the 16 MB size cap');
 
     const wig = data as Record<string, unknown>;
+
+    // A Global Caché IR database export (a "commands" list with raw Pronto
+    // hex payloads, no hair-wig "format" field) carries the same signals a
+    // wig does, so the wig entry point imports it interchangeably.
+    if (wig.format === undefined && Array.isArray(wig.commands)) {
+      return new GcFormat().decode(input, converter);
+    }
 
     if (typeof wig.format !== 'string' || !/^hair-wig\/\d+$/.test(wig.format)) {
       reasons.push(`format: required to be hair-wig/1, hair-wig/2, or hair-wig/3 (got ${wig.format ?? 'nothing'})`);
