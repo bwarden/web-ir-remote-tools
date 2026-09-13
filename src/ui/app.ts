@@ -52,9 +52,10 @@ for (const btn of tabBtns) {
 
 activate('browse');
 
-// Footer version line: dist/version.json carries the package version, git
-// identity, and build time from scripts/write-version.mjs. Best-effort — a
-// missing file (raw tsc output) simply leaves the footer unchanged.
+// Footer version line: dist/version.json carries the release tag (vX.Y.Z when
+// the build is a tagged release, else the package version), the git identity,
+// and build time from scripts/write-version.mjs. Best-effort — a missing file
+// (raw tsc output) simply leaves the footer unchanged.
 async function renderVersion(): Promise<void> {
   const footer = document.querySelector('.app-footer');
   if (!footer) return;
@@ -62,7 +63,8 @@ async function renderVersion(): Promise<void> {
     const res = await fetch('version.json', { cache: 'no-store' });
     if (!res.ok) return;
     const v = await res.json();
-    const parts = [String(v.version ?? ''), v.git && `git ${v.git}`, v.builtAt && `built ${v.builtAt}`]
+    const shown = String(v.tag ?? v.version ?? '');
+    const parts = [shown, v.git && `git ${v.git}`, v.builtAt && `built ${v.builtAt}`]
       .filter((p): p is string => Boolean(p));
     footer.append(el('p', { class: 'app-version', text: `Version ${parts.join(' · ')}` }));
   } catch {

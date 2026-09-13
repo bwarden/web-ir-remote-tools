@@ -18,12 +18,25 @@ function gitShort() {
   }
 }
 
+// The release tag pointing at HEAD (vX.Y.Z) when the build is a release;
+// empty string when untagged (e.g. an intermediate commit or tarball build).
+function gitTag() {
+  try {
+    return execSync('git describe --tags --exact-match HEAD', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return '';
+  }
+}
+
+const tag = gitTag();
 const info = {
   name: pkg.name,
   version: pkg.version,
+  tag: tag || undefined,
   git: gitShort(),
   builtAt: new Date().toISOString(),
 };
 
 writeFileSync('dist/version.json', JSON.stringify(info, null, 2) + '\n');
-console.log(`Wrote dist/version.json (${info.name} ${info.version}, git ${info.git})`);
+const identity = tag ? `${info.version} (tag ${tag})` : info.version;
+console.log(`Wrote dist/version.json (${info.name} ${identity}, git ${info.git})`);
