@@ -21,7 +21,7 @@
 // (its timing words) must give identical strings from every source.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Converter } from '../src/lib/converter.js';
@@ -155,3 +155,23 @@ for (const btn of buttons) {
     assert.equal(round.data, display);
   });
 }
+
+// The Global Caché json export is present only in local checkouts (its hex is
+// carried as literals above so a clean clone stays hermetic); when it is
+// here, the new GCIR importer must parse it in place of the embedded hex.
+const gcPath = join(samples, 'b0c3d8e523722ae5.json');
+test('RM-SG20 GC json imports in place of the embedded hex', { skip: !existsSync(gcPath) }, () => {
+  const viaGc = converter.importFormat('GCIR', readFileSync(gcPath, 'utf8'));
+  const viaWig = converter.importFormat('WIG', readFileSync(gcPath, 'utf8'));
+  assert.deepEqual(viaWig, viaGc, 'WIG entry point imports the GC export interchangeably');
+
+  for (const btn of buttons) {
+    const code = viaGc.find((c) => c.alias === btn.capture);
+    assert.ok(code, `GC import has ${btn.capture}`);
+    assert.equal(code.protocol, 'NEC', `${btn.capture} protocol`);
+    assert.equal(code.address, ADDR, `${btn.capture} address`);
+    assert.equal(code.command, btn.command, `${btn.capture} command`);
+    assert.equal(code.data, displayFor(btn.command) >>> 0, `${btn.capture} display-form data`);
+    assert.equal(bitReverseBytes(code.data as number, code.bits), btn.accumulated, `${btn.capture} datalsb matches the keycode word`);
+  }
+});
