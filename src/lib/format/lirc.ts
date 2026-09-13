@@ -316,6 +316,7 @@ function decodeProtocolCodes(remote: LircRemote, converter: Converter): IRCode[]
     // Use unsigned arithmetic (>>> 0) to avoid signed 32-bit overflow when
     // shifting high bits into the sign position (e.g. Samsung pre_data).
     let fullData = value;
+    const hadPrePost = preDataBits > 0 || postDataBits > 0;
     if (preDataBits > 0) {
       fullData = ((preData << bits) | fullData) >>> 0;
     }
@@ -330,15 +331,24 @@ function decodeProtocolCodes(remote: LircRemote, converter: Converter): IRCode[]
     // encodeData transforms display → accumulated, while NEC stores as-is).
     const protoHandler = proto ? converter.getProtocol(proto) : undefined;
     let code: IRCode;
-    if (protoHandler && typeof protoHandler.decodeRaw === 'function') {
-      code = protoHandler.decodeRaw(fullData);
+    if (protoHandler) {
+      // A code composed from pre_data/post_data carries the wire's accumulated
+      // byte order (e.g. Vizio Power 0x20DF10EF from pre_data 0x20DF + value
+      // 0x10EF) and must be reduced to the display form via decodeByteOrder —
+      // exactly as WIG and CodesCSV NEC do — to land on 0x04FB08F7 (address 4,
+      // subaddress -1, command 8) instead of decodeRaw's accumulated form
+      // (address 32, command 16). A plain codes-section value is already in its
+      // final form, so it keeps the raw decodeRaw path.
+      if (hadPrePost && typeof protoHandler.decodeByteOrder === 'function') {
+        code = protoHandler.decodeByteOrder(fullData, false);
+      } else if (typeof protoHandler.decodeRaw === 'function') {
+        code = protoHandler.decodeRaw(fullData);
+      } else {
+        code = new IRCode({ protocol: proto ?? 'UNKNOWN', bits: totalBits, data: fullData });
+      }
       code.protocol = proto!;
     } else {
-      code = new IRCode({
-        protocol: proto ?? 'UNKNOWN',
-        bits: totalBits,
-        data: fullData,
-      });
+      code = new IRCode({ protocol: proto ?? 'UNKNOWN', bits: totalBits, data: fullData });
     }
     code.alias = buttonName;
     codes.push(code);
