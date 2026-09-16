@@ -302,6 +302,26 @@ function decodeProtocolCodes(remote: LircRemote, converter: Converter): IRCode[]
 
     const proto = inferProtocol(remote);
 
+    // LIRC `SPACE_ENC` remotes store each transmitted word (pre_data,
+    // post_data, and the code value) in the wire's accumulated byte order,
+    // whose per-byte LSB-first reading the reduction below unwraps. A remote
+    // flagged REVERSE stores each word bit-mirrored within its own declared
+    // width instead — the same signal, written backwards. Restoring the wire
+    // order first makes both encodings converge on one code: Vizio VX37L
+    // (REVERSE, pre_data 0xFB04 + Power 0xF708) and LCD_TV (no REVERSE,
+    // pre_data 0x20DF + Power 0x10EF) are the same NEC signal, the second
+    // being the 16-bit mirror of the first.
+    const hadPrePost = preDataBits > 0 || postDataBits > 0;
+    const reversed = hadPrePost && /(^|\|)REVERSE(\||$)/i.test(remote.flags ?? '');
+    const mirrorWord = (word: number, width: number): number => {
+      if (width <= 0) return word;
+      let out = 0;
+      for (let i = 0; i < width; i++) {
+        out += (Math.floor(word / 2 ** i) % 2) * 2 ** (width - 1 - i);
+      }
+      return out >>> 0;
+    };
+
     for (const [buttonName, hexVal] of remote.codes ?? []) {
       let value = parseInt(hexVal, 16);
 
@@ -315,13 +335,14 @@ function decodeProtocolCodes(remote: LircRemote, converter: Converter): IRCode[]
     // Construct the full data word from pre_data, value, post_data.
     // Use unsigned arithmetic (>>> 0) to avoid signed 32-bit overflow when
     // shifting high bits into the sign position (e.g. Samsung pre_data).
-    let fullData = value;
-    const hadPrePost = preDataBits > 0 || postDataBits > 0;
+    let fullData = reversed ? mirrorWord(value, bits) : value;
     if (preDataBits > 0) {
-      fullData = ((preData << bits) | fullData) >>> 0;
+      const pre = reversed ? mirrorWord(preData, preDataBits) : preData;
+      fullData = ((pre << bits) | fullData) >>> 0;
     }
     if (postDataBits > 0) {
-      fullData = ((fullData << postDataBits) | postData) >>> 0;
+      const post = reversed ? mirrorWord(postData, postDataBits) : postData;
+      fullData = ((fullData << postDataBits) | post) >>> 0;
     }
 
     const totalBits = bits + preDataBits + postDataBits;

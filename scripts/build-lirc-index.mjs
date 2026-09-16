@@ -45,7 +45,7 @@ const COMMIT_API = `https://api.github.com/repos/${REPO}/commits/master`;
 const TARBALL_BASE = `https://codeload.github.com/${REPO}/tar.gz/`;
 
 // Indexer schema version. Bump when buildLircIndex changes the index shape.
-const GENERATOR = 3;
+const GENERATOR = 4;
 
 function parseArgs(argv) {
   const args = { skip: false, offline: false, dir: null };
