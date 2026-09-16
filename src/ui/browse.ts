@@ -442,11 +442,9 @@ export function initBrowseTab(
     el('h3', { class: 'match-head', text: 'IRDB' }),
     irdbIndexStatus,
     irdbIndexSkip,
-    el('p', { class: 'attribution', text: 'Remote codes from irdb by Simon Peter and contributors, used under permission. The database is community-maintained — add missing devices via a GitHub pull request at github.com/probonopd/irdb#contributing.' }),
     el('h3', { class: 'match-head', text: 'LIRC' }),
     lircIndexStatus,
     lircIndexSkip,
-    el('p', { class: 'attribution', text: 'Remote codes from the lirc-remotes mirror (github.com/probonopd/lirc-remotes).' }),
   );
 
   const resultsBox = el('div', {}, irdbResults, lircResults);
