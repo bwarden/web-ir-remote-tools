@@ -100,12 +100,13 @@ Notes:
 - Tags/releases do **not** drive the GitHub Pages deploy — every push to
   `main` deploys automatically. Tag a release once its deploy has gone green
   if you want the published site to match it.
-- The site footer reads `dist/version.json` and shows the exact release tag
-  (`Version v0.2.0 · git <short-sha> · built <timestamp>`) when the deploy
-  build sits at a tagged commit; untagged builds fall back to the bare package
-  version. The version line links back to the project repository. The tag is
-  resolved from `git describe --tags --exact-match HEAD` by
-  `scripts/write-version.mjs`.
+- The footer shows the exact release tag (`Version v0.2.0 · git <short-sha> ·
+  built <timestamp>`) when the build sits at a tagged commit; untagged builds
+  fall back to the bare package version. The version line is stamped into
+  `dist/index.html` by `scripts/write-version.mjs` at build time — no runtime
+  fetch, so the version always matches the page being served — and links back
+  to the project repository. The tag is resolved from
+  `git describe --tags --exact-match HEAD`.
 - The index JSONs embed the upstream commit they were built from (`version`
   field), so a released zip is reproducible against a known IRDB/lirc-remotes
   state.
