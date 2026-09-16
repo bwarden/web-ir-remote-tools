@@ -103,8 +103,9 @@ Notes:
 - The site footer reads `dist/version.json` and shows the exact release tag
   (`Version v0.2.0 · git <short-sha> · built <timestamp>`) when the deploy
   build sits at a tagged commit; untagged builds fall back to the bare package
-  version. The tag is resolved from `git describe --tags --exact-match HEAD`
-  by `scripts/write-version.mjs`.
+  version. The version line links back to the project repository. The tag is
+  resolved from `git describe --tags --exact-match HEAD` by
+  `scripts/write-version.mjs`.
 - The index JSONs embed the upstream commit they were built from (`version`
   field), so a released zip is reproducible against a known IRDB/lirc-remotes
   state.

@@ -8,6 +8,9 @@ import { initBrowseTab } from './browse.js';
 import { initCaptureTab } from './capture.js';
 import { el } from './util.js';
 
+// The repository behind the app, linked from the footer version line.
+const REPO_URL = 'https://github.com/bwarden/web-ir-remote-tools';
+
 const converter = new Converter();
 
 const remotePanel = document.getElementById('remote-panel') as HTMLElement;
@@ -66,7 +69,9 @@ async function renderVersion(): Promise<void> {
     const shown = String(v.tag ?? v.version ?? '');
     const parts = [shown, v.git && `git ${v.git}`, v.builtAt && `built ${v.builtAt}`]
       .filter((p): p is string => Boolean(p));
-    footer.append(el('p', { class: 'app-version', text: `Version ${parts.join(' · ')}` }));
+    footer.append(el('p', { class: 'app-version' },
+      el('a', { href: REPO_URL, target: '_blank', rel: 'noopener', text: `Version ${parts.join(' · ')}` }),
+    ));
   } catch {
     // version display is best-effort
   }
