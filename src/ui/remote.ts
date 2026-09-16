@@ -82,7 +82,7 @@ function groupByDevice(codes: IRCode[]): RemoteGroup[] {
 // These codes have not been proven on hardware. WigShop is for code verified
 // to work, so exporting one here must pause on that warning rather than let
 // an untested wig get uploaded silently.
-function confirmHardwareWarning(): boolean {
+export function confirmHardwareWarning(): boolean {
   return confirm(
     'This wig has not been tested against a real device. Do not upload it to HAIR\'s WigShop ' +
     'as-is. Import it into HAIR, test it on your actual hardware first, and only share it ' +
@@ -616,8 +616,7 @@ export class RemoteController {
     this.render();
   }
 
-  private wigText(): string {
-    const doc = this.doc!;
+  private wigOpts(doc: RemoteDoc): { name: string; brand?: string; model?: string; kind?: string; extra?: Record<string, unknown> } {
     const opts: { name: string; brand?: string; model?: string; kind?: string; extra?: Record<string, unknown> } = {
       name: doc.meta.name || 'Untitled',
     };
@@ -629,13 +628,23 @@ export class RemoteController {
     if (doc.meta.model || device) opts.model = doc.meta.model || device;
     if (doc.meta.kind) opts.kind = doc.meta.kind;
     if (doc.meta.extra) opts.extra = { ...doc.meta.extra };
-    return this.converter.exportCodes('WIG', doc.signals, opts);
+    return opts;
+  }
+
+  private wigText(): string {
+    return this.converter.exportCodes('WIG', this.doc!.signals, this.wigOpts(this.doc!));
+  }
+
+  // Download a wig for a given remote doc without opening it in the editor.
+  // Used by the browse tab so a device can be exported straight from its
+  // search result row, without the editor scrolling into view.
+  downloadWigFor(doc: RemoteDoc): void {
+    const base = doc.meta.name || `${doc.meta.brand || ''} ${doc.meta.model || ''}`.trim() || 'remote';
+    downloadText(`${slugify(base)}.wig.json`, 'application/json', this.converter.exportCodes('WIG', doc.signals, this.wigOpts(doc)));
   }
 
   private downloadWig(): void {
-    const doc = this.doc!;
-    const base = doc.meta.name || `${doc.meta.brand || ''} ${doc.meta.model || ''}`.trim() || 'remote';
-    downloadText(`${slugify(base)}.wig.json`, 'application/json', this.wigText());
+    this.downloadWigFor(this.doc!);
   }
 
   // The IRDB button listing, in the repository's own column order

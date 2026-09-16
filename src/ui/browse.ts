@@ -5,15 +5,18 @@
 import { Converter } from '../lib/converter.js';
 import {
   fetchDeviceList,
-  loadIrdbIndex,
+  fetchIrdbDevice,
+  fetchLircDevice,
   fetchLircDeviceList,
+  loadIrdbIndex,
   loadLircIndex,
+  parseDevicePath,
   type IrdbDevice,
   type IrdbSkipReport,
   type LircDevice,
   type LircSkipReport,
 } from './store.js';
-import { RemoteController } from './remote.js';
+import { RemoteController, confirmHardwareWarning, type RemoteDoc } from './remote.js';
 import { el, clear } from './util.js';
 
 export function initBrowseTab(
@@ -76,7 +79,7 @@ export function initBrowseTab(
   function showIrdbIdle(): void {
     clear(irdbResults);
     irdbResults.append(
-      el('p', { class: 'muted', text: 'Select a brand (and optionally a model) to list remotes. Results only appear once there is something to match.' }),
+      el('p', { class: 'muted', text: 'Select a brand (and optionally a model) to list devices. Results only appear once there is something to match.' }),
     );
   }
 
@@ -84,7 +87,7 @@ export function initBrowseTab(
     clear(irdbResults);
     const shown = hits.slice(0, 500);
     irdbResults.append(
-      el('p', { class: 'fetch-note', text: 'These remotes are not bundled with the app. Each row fetches its signals live from the IRDB CDN when you open it.' }),
+      el('p', { class: 'fetch-note', text: 'These devices are not bundled with the app. Each row fetches its signals live from the IRDB CDN when you open it.' }),
     );
     if (shown.length < hits.length) {
       irdbResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a brand and model to narrow the list.` }));
@@ -110,13 +113,18 @@ export function initBrowseTab(
         e.stopPropagation();
         void openIrdbDevice(dev);
       });
+      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download WIG' });
+      downloadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        void downloadIrdbDevice(dev);
+      });
       tr.append(
         el('td', { class: 'brand', text: dev.brand }),
         el('td', { text: dev.model }),
         el('td', { text: dev.address }),
         el('td', { text: dev.subaddress }),
         el('td', { text: dev.signals > 0 ? String(dev.signals) : '\u2014' }),
-        el('td', { class: 'open-cell' }, openBtn),
+        el('td', { class: 'open-cell' }, openBtn, downloadBtn),
       );
       tr.addEventListener('click', () => openIrdbDevice(dev));
       tbody.append(tr);
@@ -124,15 +132,45 @@ export function initBrowseTab(
     irdbResults.append(el('table', { class: 'result-table' }, thead, tbody));
   }
 
+  async function buildIrdbDoc(dev: IrdbDevice): Promise<RemoteDoc> {
+    const text = await fetchIrdbDevice(dev.path);
+    const signals = converter.importFormat('CSV', text);
+    if (!signals.length) throw new Error('No supported signals in this file');
+    const meta = parseDevicePath(dev.path);
+    return {
+      meta: {
+        name: `${meta.brand} ${meta.model}`.trim(),
+        brand: meta.brand,
+        model: meta.model,
+        kind: meta.kind ?? '',
+      },
+      signals,
+      sourcePath: dev.path,
+    };
+  }
+
   async function openIrdbDevice(dev: IrdbDevice): Promise<void> {
     try {
       irdbStatus.className = 'status';
       irdbStatus.textContent = `Loading ${dev.brand} ${dev.model}\u2026`;
-      await remote.loadDevice(dev.path);
+      await remote.load(await buildIrdbDoc(dev));
       irdbStatus.textContent = '';
     } catch (e) {
       irdbStatus.className = 'status error';
       irdbStatus.textContent = `Could not load ${dev.path}: ${(e as Error).message}`;
+    }
+  }
+
+  async function downloadIrdbDevice(dev: IrdbDevice): Promise<void> {
+    if (!confirmHardwareWarning()) return;
+    try {
+      irdbStatus.className = 'status';
+      irdbStatus.textContent = `Preparing ${dev.brand} ${dev.model}\u2026`;
+      remote.downloadWigFor(await buildIrdbDoc(dev));
+      irdbStatus.textContent = '';
+    } catch (e) {
+      irdbStatus.className = 'status error';
+      irdbStatus.textContent = `Could not download ${dev.path}: ${(e as Error).message}`;
     }
   }
 
@@ -156,7 +194,7 @@ export function initBrowseTab(
   const lircResults = el('div');
 
   const mfgSelect = el('select', {}, el('option', { value: '', text: 'All manufacturers' }));
-  const remoteSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All remotes' }));
+  const remoteSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All devices' }));
   const lircCountLabel = el('span', { class: 'muted' });
 
   let lircDevices: LircDevice[] = [];
@@ -176,13 +214,13 @@ export function initBrowseTab(
     clear(remoteSelect);
     if (!mfg) {
       remoteSelect.disabled = true;
-      remoteSelect.append(el('option', { value: '', text: 'All remotes' }));
+      remoteSelect.append(el('option', { value: '', text: 'All devices' }));
       return;
     }
     const remotes = [...new Set(lircDevices.filter((d) => d.manufacturer === mfg).map((d) => d.remote))]
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     remoteSelect.disabled = false;
-    remoteSelect.append(el('option', { value: '', text: 'All remotes' }));
+    remoteSelect.append(el('option', { value: '', text: 'All devices' }));
     for (const r of remotes) remoteSelect.append(el('option', { value: r, text: r }));
   }
 
@@ -190,20 +228,20 @@ export function initBrowseTab(
     const mfg = mfgSelect.value;
     const remote = remoteSelect.value;
     if (!mfg && !remote) {
-      lircCountLabel.textContent = `${lircDevices.length} remotes in the index`;
+      lircCountLabel.textContent = `${lircDevices.length} devices in the index`;
       showLircIdle();
       return;
     }
     const hits = lircDevices.filter((dev) =>
       (!mfg || dev.manufacturer === mfg) && (!remote || dev.remote === remote));
-    lircCountLabel.textContent = `${hits.length} remote${hits.length === 1 ? '' : 's'}`;
+    lircCountLabel.textContent = `${hits.length} device${hits.length === 1 ? '' : 's'}`;
     renderLircResults(hits);
   }
 
   function showLircIdle(): void {
     clear(lircResults);
     lircResults.append(
-      el('p', { class: 'muted', text: 'Select a manufacturer (and optionally a remote) to list LIRC definitions. Results only appear once there is something to match.' }),
+      el('p', { class: 'muted', text: 'Select a manufacturer (and optionally a device) to list LIRC devices. Results only appear once there is something to match.' }),
     );
   }
 
@@ -211,19 +249,19 @@ export function initBrowseTab(
     clear(lircResults);
     const shown = hits.slice(0, 500);
     lircResults.append(
-      el('p', { class: 'fetch-note', text: 'These remotes are fetched on demand from the lirc-remotes repository.' }),
+      el('p', { class: 'fetch-note', text: 'These devices are fetched on demand from the lirc-remotes repository.' }),
     );
     if (shown.length < hits.length) {
-      lircResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} remotes. Pick a manufacturer to narrow the list.` }));
+      lircResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a manufacturer to narrow the list.` }));
     }
     if (!shown.length) {
-      lircResults.append(el('p', { class: 'muted', text: 'No matching remotes.' }));
+      lircResults.append(el('p', { class: 'muted', text: 'No matching devices.' }));
       return;
     }
 
     const thead = el('thead', {}, el('tr', {},
       el('th', { text: 'Brand' }),
-      el('th', { text: 'Remote' }),
+      el('th', { text: 'Device' }),
       el('th', { text: 'Model' }),
       el('th', { text: 'Signals' }),
       el('th', { text: '' }),
@@ -236,12 +274,17 @@ export function initBrowseTab(
         e.stopPropagation();
         void openLircDevice(dev);
       });
+      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download WIG' });
+      downloadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        void downloadLircDevice(dev);
+      });
       tr.append(
         el('td', { class: 'brand', text: dev.brand }),
         el('td', { text: dev.remote }),
         el('td', { text: dev.model }),
         el('td', { text: dev.signals > 0 ? String(dev.signals) : '\u2014' }),
-        el('td', { class: 'open-cell' }, openBtn),
+        el('td', { class: 'open-cell' }, openBtn, downloadBtn),
       );
       tr.addEventListener('click', () => openLircDevice(dev));
       tbody.append(tr);
@@ -249,20 +292,38 @@ export function initBrowseTab(
     lircResults.append(el('table', { class: 'result-table' }, thead, tbody));
   }
 
+  async function buildLircDoc(dev: LircDevice): Promise<RemoteDoc> {
+    const text = await fetchLircDevice(dev.path);
+    const codes = converter.importFormat('LIRC', text);
+    if (!codes.length) throw new Error('No supported signals in this device');
+    return {
+      meta: { name: dev.remote, brand: '', model: dev.remote, kind: '' },
+      signals: codes,
+    };
+  }
+
   async function openLircDevice(dev: LircDevice): Promise<void> {
     try {
       lircStatus.className = 'status';
       lircStatus.textContent = `Loading ${dev.brand} ${dev.remote}\u2026`;
-      const { fetchLircDevice } = await import('./store.js');
-      const text = await fetchLircDevice(dev.path);
-      const { Converter: Conv } = await import('../lib/converter.js');
-      const conv = new Conv();
-      const codes = conv.importFormat('LIRC', text);
-      await remote.loadFromCodes(codes, dev.remote);
+      await remote.load(await buildLircDoc(dev));
       lircStatus.textContent = '';
     } catch (e) {
       lircStatus.className = 'status error';
       lircStatus.textContent = `Could not load ${dev.path}: ${(e as Error).message}`;
+    }
+  }
+
+  async function downloadLircDevice(dev: LircDevice): Promise<void> {
+    if (!confirmHardwareWarning()) return;
+    try {
+      lircStatus.className = 'status';
+      lircStatus.textContent = `Preparing ${dev.brand} ${dev.remote}\u2026`;
+      remote.downloadWigFor(await buildLircDoc(dev));
+      lircStatus.textContent = '';
+    } catch (e) {
+      lircStatus.className = 'status error';
+      lircStatus.textContent = `Could not download ${dev.path}: ${(e as Error).message}`;
     }
   }
 
@@ -346,7 +407,7 @@ export function initBrowseTab(
     const rev = idx.version.slice(0, 7);
     const commitAge = idx.commitDate ? ` (committed ${new Date(idx.commitDate).toLocaleDateString()})` : '';
     lircIndexStatus.textContent =
-      `${idx.devices.length} remotes indexed (LIRC @${rev}${commitAge}), ${idx.misses} files skipped, built ${when}`;
+      `${idx.devices.length} devices indexed (LIRC @${rev}${commitAge}), ${idx.misses} files skipped, built ${when}`;
     clear(lircIndexSkip);
     lircIndexSkip.append(
       el('summary', { text: `${idx.misses} skipped files \u2014 why` }),
@@ -356,35 +417,32 @@ export function initBrowseTab(
 
   // --- assemble sections ----------------------------------------------------
 
-  const irdbControls = el('fieldset', {},
-    el('legend', { text: 'Browse IRDB devices' }),
+  const browseControls = el('fieldset', {},
+    el('legend', { text: 'Browse devices' }),
+    el('h3', { class: 'match-head', text: 'IRDB' }),
     el('div', { class: 'row' },
       el('label', { class: 'input-row' }, el('span', { text: 'Brand' }), brandSelect),
       el('label', { class: 'input-row' }, el('span', { text: 'Model' }), modelSelect),
       irdbCountLabel,
     ),
     irdbStatus,
-    el('p', { class: 'muted', text: 'Click a device to open it for editing.' }),
-  );
-
-  const lircControls = el('fieldset', {},
-    el('legend', { text: 'Browse LIRC remotes' }),
+    el('h3', { class: 'match-head', text: 'LIRC' }),
     el('div', { class: 'row' },
       el('label', { class: 'input-row' }, el('span', { text: 'Manufacturer' }), mfgSelect),
-      el('label', { class: 'input-row' }, el('span', { text: 'Remote' }), remoteSelect),
+      el('label', { class: 'input-row' }, el('span', { text: 'Device' }), remoteSelect),
       lircCountLabel,
     ),
     lircStatus,
-    el('p', { class: 'muted', text: 'Click a remote to open it for editing.' }),
+    el('p', { class: 'muted', text: 'Click a device to open it for editing, or download its wig directly.' }),
   );
 
-  const captureIndexBox = el('fieldset', {},
-    el('legend', { text: 'Capture matching' }),
-    el('p', { class: 'muted', text: 'Find a remote from a pasted capture by matching against the IRDB and LIRC code indexes. The indexes are generated when the site is built and downloaded as single files.' }),
+  const databaseInfoBox = el('fieldset', {},
+    el('legend', { text: 'Database information' }),
+    el('p', { class: 'muted', text: 'The device indexes this page browses and matches captures against. They are generated when the site is built and downloaded as single files.' }),
     el('h3', { class: 'match-head', text: 'IRDB' }),
     irdbIndexStatus,
     irdbIndexSkip,
-    el('p', { class: 'attribution', text: 'Remote codes from irdb by Simon Peter and contributors, used under permission. The database is community-maintained — add missing remotes via a GitHub pull request at github.com/probonopd/irdb#contributing.' }),
+    el('p', { class: 'attribution', text: 'Remote codes from irdb by Simon Peter and contributors, used under permission. The database is community-maintained — add missing devices via a GitHub pull request at github.com/probonopd/irdb#contributing.' }),
     el('h3', { class: 'match-head', text: 'LIRC' }),
     lircIndexStatus,
     lircIndexSkip,
@@ -393,7 +451,7 @@ export function initBrowseTab(
 
   const resultsBox = el('div', {}, irdbResults, lircResults);
 
-  section.append(irdbControls, lircControls, captureIndexBox, resultsBox);
+  section.append(browseControls, resultsBox, databaseInfoBox);
 
   brandSelect.addEventListener('change', () => {
     refreshModelOptions();
