@@ -177,9 +177,67 @@ export class MwmProtocol implements ProtocolHandler {
   // accumulated/DataLSB form to translate.
   readonly lsbIsAccumulated = false;
 
+  // A bundle is the accumulation of two or more length-declared MWM frames
+  // (typically a command A, its status companion B, and a repeat A' -- all
+  // three self-declare their own byte length in their leading byte, so the
+  // stream is walkable without any side information). ``#`` is a value carrier
+  // ("0x..." or bare hex) that, when it is the whole value, is split into one
+  // IRCode per frame. The first frame returned is the command/decodeRaw frame
+  // A, which is what the structured Data field of a Tasmota MWM record
+  // normally carries; ``unbundle`` exists so a single structured hex tap can
+  // split a real A+B+A' capture into all three of its own frames.
+  unbundle(value: string | number | bigint): IRCode[] {
+    const val = BigInt(parseIntBig(value));
+    if (val < 0n) throw new Error('MWM data must be non-negative');
+    // Walk the value as a run of length-declared frames. ``0x9x``/``0xFx``
+    // leading nibbles declare n+3 payload bytes (MWM's 3-byte minimum,
+    // byte0's low nibble declaring the byte count after the fixed 3-byte
+    // header). When the walk cannot land exactly on the value end, the value
+    // is a single bare frame (24-bit show / width-based values) and this
+    // returns the one IRCode built from the whole value.
+    const hex = val.toString(16).padStart(6, '0');
+    const nBytes = Math.ceil(hex.length / 2);
+    const bytes: number[] = [];
+    for (let i = 0; i < nBytes; i++) {
+      bytes.push(parseInt(hex.slice(i * 2, i * 2 + 2), 16));
+    }
+    const frames: number[][] = [];
+    let pos = 0;
+    while (pos < bytes.length) {
+      const header = bytes[pos];
+      const declared = (header & 0x0f) + 3;
+      if (pos + declared > bytes.length) break; // trailing noise: not a bundle
+      const frame = bytes.slice(pos, pos + declared);
+      const high = header & 0xf0;
+      if (high !== 0x90 && high !== 0xf0) break; // not a length-declared byte
+      frames.push(frame);
+      pos += declared;
+    }
+    if (frames.length < 2 || pos !== bytes.length) {
+      // Single frame (or a non-length walk): the width-derived frame is the
+      // same one decodeRaw's fallback builds -- inline that law here so a
+      // single frame never rings unbundle<->decodeRaw.
+      const hexDigits = val.toString(16);
+      const bits = Math.max(kMinBits, Math.ceil(hexDigits.length / 2) * 8);
+      return [new IRCode({ protocol: this.name, bits, data: val })];
+    }
+    const codes: IRCode[] = [];
+    for (const frame of frames) {
+      let data = 0n;
+      for (const b of frame) data = (data << 8n) | BigInt(b);
+      codes.push(new IRCode({ protocol: this.name, bits: frame.length * 8, data }));
+    }
+    return codes;
+  }
+
   decodeRaw(raw: string | number | bigint): IRCode {
     const val = BigInt(parseIntBig(raw));
     if (val < 0n) throw new Error('MWM data must be non-negative');
+    // A structured tap that ingested a whole A+B+A' bundle asks for a single
+    // code: the bundle's first frame (A) is the command that decodeRaw
+    // returns for the record's Data field.
+    const bundled = this.unbundle(val);
+    if (bundled.length >= 2) return bundled[0];
     const hexDigits = val.toString(16);
     // The frame length is implied by the value's own width, rounded up to a
     // whole number of bytes with the 3-byte protocol minimum.

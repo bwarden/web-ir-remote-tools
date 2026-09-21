@@ -424,7 +424,23 @@ export class TasmotaFormat {
     for (const record of splitRecords(text)) {
       try {
         const code = decodeRecord(record, converter);
-        if (code) codes.push(code);
+        if (!code) continue;
+        // A structured MWM record's Data field can carry a whole A+B+A'
+        // bundle (a "capture"), which Tasmota logged as one value -- unwrap it
+        // here so every frame of the bundle is yielded as its own code.
+        if (code.protocol === 'MWM') {
+          // A structured MWM tap's Data field can carry a whole A+B+A'
+          // bundle (a "capture") -- unwrap it through the protocol's optional
+          // unbundle capability so every frame of the bundle is yielded.
+          const bundled = converter.getProtocol('MWM')?.unbundle?.(
+            code.data as string | number | bigint,
+          ) ?? [];
+          if (bundled.length >= 2) {
+            for (const b of bundled) if (b) codes.push(b);
+            continue;
+          }
+        }
+        codes.push(code);
       } catch {
         continue;
       }

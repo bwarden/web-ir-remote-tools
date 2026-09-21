@@ -41,4 +41,11 @@ export interface ProtocolHandler {
   // False for whole-word MSB-first protocols such as SAMSUNG36, where
   // DataLSB is a display artifact and the Data field itself must be used.
   readonly lsbIsAccumulated?: boolean;
+
+  // Protocols that may ingest a whole accumulated A+B+A' bundle in a single
+  // structured hex tap provide this to split it back into its own frames.
+  // Absent for single-frame protocols. The tasmota decodeDump path unwraps
+  // a bundled structured record here so every frame is yielded, instead of
+  // sinking the whole bundle into one IRCode.
+  unbundle?(value: string | number | bigint): IRCode[];
 }
