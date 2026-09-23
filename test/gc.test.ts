@@ -142,3 +142,21 @@ test('unknown-protocol GC payload converts via WIG losslessly', () => {
   const reimport = converter.importFormat('WIG', wig);
   assert.equal(reimport.find((c) => c.alias === 'Auto')?.pronto, orig, 'wig -> code keeps pronto hex');
 });
+
+test('a GC commands list is never emitted in a WIG export', () => {
+  // OpenWig preserves every unknown GC top-level key and hands it to the wig
+  // export as opts.extra. The commands list is the GC payload, not wig
+  // metadata, so it must not surface in the downloaded wig.
+  const codes = converter.importFormat('WIG', eufyGcJson);
+  const doc = JSON.parse(eufyGcJson) as Record<string, unknown>;
+  const extra: Record<string, unknown> = {};
+  for (const key of Object.keys(doc)) {
+    if (!['format', 'name', 'brand', 'model', 'kind', 'signals', 'climate'].includes(key)) {
+      extra[key] = doc[key];
+    }
+  }
+  assert.ok('commands' in extra, 'commands is an unknown top-level key to the editor');
+  const wig = JSON.parse(converter.exportCodes('WIG', codes, { name: 'R', extra })) as Record<string, unknown>;
+  assert.ok(!('commands' in wig), 'wig export drops the GC commands payload');
+  assert.equal(wig.format, 'hair-wig/3', 'still a valid wig');
+});

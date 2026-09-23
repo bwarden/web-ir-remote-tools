@@ -146,6 +146,12 @@ export class WigFormat {
     // Preserved keys land last so they win over the defaults above (a file
     // that came in with its own wig_id, origin, or notes keeps them).
     for (const [key, value] of Object.entries(opts.extra ?? {})) {
+      // "commands" is the Global Caché payload the wig entry point swaps on
+      // (a document with a commands list and no format is GC, not wig), so it
+      // is never wig metadata and never rides along into a wig export; an
+      // editor that preserves unknown keys keeps it until export, where it
+      // must drop it.
+      if (key === 'commands') continue;
       wig[key] = value;
     }
 
