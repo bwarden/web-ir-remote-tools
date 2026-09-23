@@ -15,7 +15,7 @@ const remote = new RemoteController(converter, remotePanel);
 const browseSection = document.getElementById('tab-browse') as HTMLElement;
 const captureSection = document.getElementById('tab-capture') as HTMLElement;
 
-initBrowseTab(browseSection, converter, remote);
+initBrowseTab(browseSection, converter, remote, remotePanel);
 initCaptureTab(captureSection, converter, remote);
 
 // Header file-open tools: loading a wig or CSV opens the remote editor, no

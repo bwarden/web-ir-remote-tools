@@ -1,6 +1,6 @@
-// Browse IRDB and LIRC: pick a brand/model (IRDB) or manufacturer/remote
-// (LIRC) from the device list and open a device as an editable remote.
-// Also reports the status of the capture-match indexes.
+// Browse IRDB and LIRC: pick a brand and a device from either database index
+// and open a device as an editable remote. Also reports the status of the
+// capture-match indexes in a block that floats below the remote editor.
 
 import { Converter } from '../lib/converter.js';
 import {
@@ -23,6 +23,7 @@ export function initBrowseTab(
   section: HTMLElement,
   converter: Converter,
   remote: RemoteController,
+  belowPanel: HTMLElement,
 ): void {
   clear(section);
 
@@ -32,7 +33,7 @@ export function initBrowseTab(
   const irdbResults = el('div');
 
   const brandSelect = el('select', {}, el('option', { value: '', text: 'All brands' }));
-  const modelSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All models' }));
+  const modelSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All devices' }));
   const irdbCountLabel = el('span', { class: 'muted' });
 
   let irdbDevices: IrdbDevice[] = [];
@@ -52,13 +53,13 @@ export function initBrowseTab(
     clear(modelSelect);
     if (!brand) {
       modelSelect.disabled = true;
-      modelSelect.append(el('option', { value: '', text: 'All models' }));
+      modelSelect.append(el('option', { value: '', text: 'All devices' }));
       return;
     }
     const models = [...new Set(irdbDevices.filter((d) => d.brand === brand).map((d) => d.model))]
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     modelSelect.disabled = false;
-    modelSelect.append(el('option', { value: '', text: 'All models' }));
+    modelSelect.append(el('option', { value: '', text: 'All devices' }));
     for (const m of models) modelSelect.append(el('option', { value: m, text: m }));
   }
 
@@ -79,7 +80,6 @@ export function initBrowseTab(
   function showIrdbIdle(): void {
     clear(irdbResults);
     irdbResults.append(
-      el('p', { class: 'muted', text: 'Select a brand (and optionally a model) to list devices. Results only appear once there is something to match.' }),
     );
   }
 
@@ -90,7 +90,7 @@ export function initBrowseTab(
       el('p', { class: 'fetch-note', text: 'These devices are not bundled with the app. Each row fetches its signals live from the IRDB CDN when you open it.' }),
     );
     if (shown.length < hits.length) {
-      irdbResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a brand and model to narrow the list.` }));
+      irdbResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a brand and device to narrow the list.` }));
     }
     if (!shown.length) {
       irdbResults.append(el('p', { class: 'muted', text: 'No matching devices.' }));
@@ -99,7 +99,7 @@ export function initBrowseTab(
 
     const thead = el('thead', {}, el('tr', {},
       el('th', { text: 'Brand' }),
-      el('th', { text: 'Model' }),
+      el('th', { text: 'Device' }),
       el('th', { text: 'Address' }),
       el('th', { text: 'Subaddress' }),
       el('th', { text: 'Signals' }),
@@ -193,7 +193,7 @@ export function initBrowseTab(
   const lircStatus = el('div', { class: 'status' });
   const lircResults = el('div');
 
-  const mfgSelect = el('select', {}, el('option', { value: '', text: 'All manufacturers' }));
+  const mfgSelect = el('select', {}, el('option', { value: '', text: 'All brands' }));
   const remoteSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All devices' }));
   const lircCountLabel = el('span', { class: 'muted' });
 
@@ -204,7 +204,7 @@ export function initBrowseTab(
     const mfgs = [...new Set(lircDevices.map((d) => d.manufacturer))]
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     clear(mfgSelect);
-    mfgSelect.append(el('option', { value: '', text: 'All manufacturers' }));
+    mfgSelect.append(el('option', { value: '', text: 'All brands' }));
     for (const m of mfgs) mfgSelect.append(el('option', { value: m, text: m }));
     mfgSelect.value = current;
   }
@@ -241,7 +241,6 @@ export function initBrowseTab(
   function showLircIdle(): void {
     clear(lircResults);
     lircResults.append(
-      el('p', { class: 'muted', text: 'Select a manufacturer (and optionally a device) to list LIRC devices. Results only appear once there is something to match.' }),
     );
   }
 
@@ -252,7 +251,7 @@ export function initBrowseTab(
       el('p', { class: 'fetch-note', text: 'These devices are fetched on demand from the lirc-remotes repository.' }),
     );
     if (shown.length < hits.length) {
-      lircResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a manufacturer to narrow the list.` }));
+      lircResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a brand to narrow the list.` }));
     }
     if (!shown.length) {
       lircResults.append(el('p', { class: 'muted', text: 'No matching devices.' }));
@@ -262,7 +261,6 @@ export function initBrowseTab(
     const thead = el('thead', {}, el('tr', {},
       el('th', { text: 'Brand' }),
       el('th', { text: 'Device' }),
-      el('th', { text: 'Model' }),
       el('th', { text: 'Signals' }),
       el('th', { text: '' }),
     ));
@@ -282,7 +280,6 @@ export function initBrowseTab(
       tr.append(
         el('td', { class: 'brand', text: dev.brand }),
         el('td', { text: dev.remote }),
-        el('td', { text: dev.model }),
         el('td', { text: dev.signals > 0 ? String(dev.signals) : '\u2014' }),
         el('td', { class: 'open-cell' }, openBtn, downloadBtn),
       );
@@ -297,7 +294,7 @@ export function initBrowseTab(
     const codes = converter.importFormat('LIRC', text);
     if (!codes.length) throw new Error('No supported signals in this device');
     return {
-      meta: { name: dev.remote, brand: '', model: dev.remote, kind: '' },
+      meta: { name: dev.remote, brand: dev.brand, model: dev.remote, kind: '' },
       signals: codes,
     };
   }
@@ -419,21 +416,24 @@ export function initBrowseTab(
 
   const browseControls = el('fieldset', {},
     el('legend', { text: 'Browse devices' }),
+    el('p', { class: 'muted', text: 'Both databases list many entries by controlled device, but LIRC also has a large selection of entries for specific remote control models.' }),
     el('h3', { class: 'match-head', text: 'IRDB' }),
     el('div', { class: 'row' },
       el('label', { class: 'input-row' }, el('span', { text: 'Brand' }), brandSelect),
-      el('label', { class: 'input-row' }, el('span', { text: 'Model' }), modelSelect),
+      el('label', { class: 'input-row' }, el('span', { text: 'Device' }), modelSelect),
       irdbCountLabel,
     ),
     irdbStatus,
     el('h3', { class: 'match-head', text: 'LIRC' }),
     el('div', { class: 'row' },
-      el('label', { class: 'input-row' }, el('span', { text: 'Manufacturer' }), mfgSelect),
+      el('label', { class: 'input-row' }, el('span', { text: 'Brand' }), mfgSelect),
       el('label', { class: 'input-row' }, el('span', { text: 'Device' }), remoteSelect),
       lircCountLabel,
     ),
     lircStatus,
     el('p', { class: 'muted', text: 'Click a device to open it for editing, or download its wig directly.' }),
+    irdbResults,
+    lircResults,
   );
 
   const databaseInfoBox = el('fieldset', {},
@@ -447,9 +447,14 @@ export function initBrowseTab(
     lircIndexSkip,
   );
 
-  const resultsBox = el('div', {}, irdbResults, lircResults);
-
-  section.append(browseControls, resultsBox, databaseInfoBox);
+  section.append(browseControls);
+  // The database-information block floats below the opened remote editor
+  // rather than sitting between the browse controls and the page bottom. It
+  // shares the editor container's width constraint so it matches the browse
+  // panel instead of spanning the full page.
+  const databasePanel = el('div', { class: 'remote-panel' });
+  databasePanel.append(databaseInfoBox);
+  belowPanel.after(databasePanel);
 
   brandSelect.addEventListener('change', () => {
     refreshModelOptions();
