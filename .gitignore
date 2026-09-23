@@ -5,3 +5,8 @@ dist/
 !test/fixtures/*.log
 !samples/*.log
 .DS_Store
+
+# Local-only captures (real customer device / local MQTT config): kept in the
+# workspace for reference, never committed and never shipped to dist/samples.
+/samples/tasmota-mqtt.yaml
+/samples/rm-sg20/b0c3d8e523722ae5.json
