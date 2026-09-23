@@ -72,7 +72,6 @@ test('GC validation is all-or-nothing with field-level reasons', () => {
     ['{}', /commands: required/],
     ['{"commands": 3}', /commands: must be a list/],
     ['{"commands": []}', /commands: must not be empty/],
-    ['{"commands": [{"name": "X"}]}', /commands\[0\]\.pronto: required/],
     ['{"commands": [{"name": "", "pronto": "0000 006D 0022 0000"}]}', /commands\[0\]\.name: required/],
     ['{"commands": [{"name": "X", "pronto": "nonsense"}]}', /commands\[0\]\.pronto/],
   ] as [string, RegExp][]) {
@@ -80,7 +79,66 @@ test('GC validation is all-or-nothing with field-level reasons', () => {
   }
 });
 
+test('GC skips commands without a Pronto payload', () => {
+  const codes = converter.importFormat('GCIR', JSON.stringify({
+    commands: [
+      { name: 'NoSignal' },
+      { name: 'Real', pronto: '0000 006D 0002 0000 0071 0072 0013 0013' },
+    ],
+  }));
+  assert.equal(codes.length, 1, 'payload-less command skipped');
+  assert.equal(codes[0].alias, 'Real');
+});
+
 test('a wig-shaped document is not treated as GC', () => {
   const wig = JSON.stringify({ format: 'hair-wig/3', name: 'R', signals: [] });
   assert.throws(() => converter.importFormat('GCIR', wig), /commands: required/);
+});
+
+// Real Global Cache export for an "Eufy 40 Bit" gadget (no registered
+// protocol names it). The Pronto hex must survive GC -> WIG -> GC verbatim.
+// Three commands extracted from a real GC export (workspace samples/); the
+// files themselves are local-only and never shipped with the build.
+const eufyGcJson = JSON.stringify({
+  commands: [
+    {
+      keycode: 'G:Eufy 40 Bit:()(0x68A0000008)():3',
+      name: 'Auto',
+      protocol: 'Eufy 40 Bit',
+      pronto: '0000 006D 002A 0000 0071 0072 0013 0013 0013 0039 0013 0039 0013 0013 0013 0039 0013 0013 0013 0013 0013 0013 0013 0039 0013 0013 0013 0039 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0039 0013 0013 0013 0013 0013 0013 0013 0304',
+    },
+    {
+      keycode: 'G:Eufy 40 Bit:()(0x68450632E5)():3',
+      name: 'CurrentTime',
+      protocol: 'Eufy 40 Bit',
+      pronto: '0000 006D 002A 0000 0071 0072 0013 0013 0013 0039 0013 0039 0013 0013 0013 0039 0013 0013 0013 0013 0013 0013 0013 0013 0013 0039 0013 0013 0013 0013 0013 0013 0013 0039 0013 0013 0013 0039 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0039 0013 0039 0013 0013 0013 0013 0013 0013 0013 0039 0013 0039 0013 0013 0013 0013 0013 0039 0013 0013 0013 0039 0013 0039 0013 0039 0013 0013 0013 0013 0013 0039 0013 0013 0013 0039 0013 0304',
+    },
+    {
+      keycode: 'G:Eufy 40 Bit:()(0x68B300001B)():3',
+      name: 'DirectionDown',
+      protocol: 'Eufy 40 Bit',
+      pronto: '0000 006D 002A 0000 0071 0072 0013 0013 0013 0039 0013 0039 0013 0013 0013 0039 0013 0013 0013 0013 0013 0013 0013 0039 0013 0013 0013 0039 0013 0039 0013 0013 0013 0013 0013 0039 0013 0039 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0013 0039 0013 0039 0013 0013 0013 0039 0013 0039 0013 0304',
+    },
+  ],
+}, null, 2);
+
+test('unknown-protocol GC payload converts via WIG losslessly', () => {
+  const orig = (JSON.parse(eufyGcJson).commands as Array<{ name: string; pronto: string }>)
+    .find((c) => c.name === 'Auto')!.pronto;
+
+  const codes = converter.importFormat('GCIR', eufyGcJson);
+  assert.equal(codes.length, 3, 'every command imported (all three unknown)');
+  const auto = codes.find((c) => c.alias === 'Auto');
+  assert.equal(auto?.protocol, 'UNKNOWN', 'unknown protocol imports as UNKNOWN');
+  assert.equal(auto?.bypassProtocol, true, 'raw code sets bypassProtocol');
+  assert.equal(auto?.pronto, orig, 'original Pronto hex stashed');
+  assert.equal(converter.exportCode(auto as never, 'Pronto'), orig, 'Pronto export re-emits stashed hex');
+
+  const wig = converter.exportCodes('WIG', codes);
+  const doc = JSON.parse(wig) as { signals: Array<{ pronto: string; bypass_protocol?: boolean }> };
+  assert.equal(doc.signals.length, codes.length, 'wig carries every signal');
+  assert.equal(doc.signals[0].pronto, orig, 'wig keeps pronto hex verbatim');
+
+  const reimport = converter.importFormat('WIG', wig);
+  assert.equal(reimport.find((c) => c.alias === 'Auto')?.pronto, orig, 'wig -> code keeps pronto hex');
 });

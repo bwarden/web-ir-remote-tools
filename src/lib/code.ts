@@ -29,6 +29,11 @@ export class IRCode {
   dittoCount = 0;
   bypassProtocol = false;
   timings?: number[];
+  // The original raw Pronto Hex of a signal no registered protocol
+  // recognized, stashed verbatim so the code re-exports losslessly as a raw
+  // (protocol 'UNKNOWN', bypassProtocol set) signal. Undefined for codes
+  // built from decoded fields.
+  pronto?: string;
 
   constructor(init?: Partial<IRCode>) {
     if (init) Object.assign(this, init);

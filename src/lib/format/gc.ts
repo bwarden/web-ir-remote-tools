@@ -22,7 +22,9 @@ export class GcFormat {
   // Parse a Global Caché IR database JSON string into IRCode objects.
   // Validation is all-or-nothing and field-level, mirroring the wig
   // importer: every problem is reported at once with a "commands[i].field"
-  // reason and a malformed file is rejected wholesale.
+    // reason and a malformed file is rejected wholesale. Commands that carry
+    // no Pronto payload (a compact export may list buttons it never captured
+    // a signal for) are skipped rather than failing the import.
   decode(input: unknown, converter: Converter): IRCode[] {
     if (input === undefined || input === null) throw new Error('No GC input provided');
 
@@ -63,14 +65,15 @@ export class GcFormat {
           reasons.push(`commands[${i}].name: required`);
         }
 
-        if (typeof command.pronto !== 'string' || command.pronto.trim() === '') {
-          reasons.push(`commands[${i}].pronto: required`);
-        } else {
-          try {
-            converter.importFormat('Pronto', command.pronto);
-          } catch (e) {
-            reasons.push(`commands[${i}].pronto: ${(e as Error).message}`);
-          }
+        // A compact export may list commands without a Pronto payload (no
+        // signal captured for them); nothing to convert, so skip rather than
+        // fail the whole import.
+        if (typeof command.pronto !== 'string' || command.pronto.trim() === '') return;
+
+        try {
+          converter.importFormat('Pronto', command.pronto);
+        } catch (e) {
+          reasons.push(`commands[${i}].pronto: ${(e as Error).message}`);
         }
       });
     }
@@ -82,7 +85,8 @@ export class GcFormat {
     const decoded: IRCode[] = [];
     for (const cmd of commands as unknown[]) {
       const command = cmd as Record<string, unknown>;
-      const code = converter.importFormat('Pronto', command.pronto as string)[0];
+      if (typeof command.pronto !== 'string' || command.pronto.trim() === '') continue;
+      const code = converter.importFormat('Pronto', command.pronto)[0];
       code.alias = command.name as string;
       decoded.push(code);
     }
