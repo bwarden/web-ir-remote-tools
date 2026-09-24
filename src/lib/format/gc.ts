@@ -88,8 +88,30 @@ export class GcFormat {
       if (typeof command.pronto !== 'string' || command.pronto.trim() === '') continue;
       const code = converter.importFormat('Pronto', command.pronto)[0];
       code.alias = command.name as string;
+      code.sendCount = gcRepeatCount(command);
       decoded.push(code);
     }
     return decoded;
   }
+}
+
+// The repeat count of a GC command: how many times the whole code replays
+// upon transmission. A raw IR database export records it two ways — a
+// per-command "repeats" integer in some exports, and always as the trailing
+// ":N" segment of the keycode (e.g. "G:Eufy 40 Bit:()(0x68A0000008)():3").
+// 0 means no count was recorded, which the wig exporter reads as the default
+// single press.
+function gcRepeatCount(command: Record<string, unknown>): number {
+  const r = command.repeats;
+  if (typeof r === 'number' && Number.isInteger(r) && r >= 1) return r;
+  if (typeof r === 'string' && /^\d+$/.test(r)) {
+    const fromField = Number.parseInt(r, 10);
+    if (fromField >= 1) return fromField;
+  }
+  const keycodeTail = typeof command.keycode === 'string' && /:(\d{1,3})$/.exec(command.keycode);
+  if (keycodeTail) {
+    const fromKeycode = Number.parseInt(keycodeTail[1], 10);
+    if (fromKeycode >= 1) return fromKeycode;
+  }
+  return 0;
 }

@@ -102,15 +102,22 @@ export class WigFormat {
     // are. Only the synthesized UNKNOWN <command> names are made unique, so
     // they never collide with a real button or with each other.
     const used = new Set(list.map((code) => code.alias).filter(Boolean));
-    const signals: Array<{ alias: string; pronto: string; ditto_count: number; bypass_protocol: boolean }> = [];
+    const signals: Array<{ alias: string; pronto: string; ditto_count: number; bypass_protocol: boolean; send_count?: number }> = [];
+    const signalFor = (code: IRCode, alias: string, pronto: string): (typeof signals)[number] => {
+      const sig: (typeof signals)[number] = {
+        alias,
+        pronto,
+        ditto_count: clampDittoCount(code),
+        bypass_protocol: code.bypassProtocol ? true : false,
+      };
+      // send_count is optional and defaults to 1, so only a repeat count that
+      // differs from the default is written (the canonical forms leave it out).
+      if (code.sendCount >= 2) sig.send_count = code.sendCount;
+      return sig;
+    };
     list.forEach((code, i) => {
       if (code.alias) {
-        signals.push({
-          alias: code.alias,
-          pronto: prontos[i],
-          ditto_count: clampDittoCount(code),
-          bypass_protocol: code.bypassProtocol ? true : false,
-        });
+        signals.push(signalFor(code, code.alias, prontos[i]));
         return;
       }
       if (namedProntos.has(prontos[i])) return;
@@ -122,12 +129,7 @@ export class WigFormat {
         alias = `${base}_${n}`;
       }
       used.add(alias);
-      signals.push({
-        alias,
-        pronto: prontos[i],
-        ditto_count: clampDittoCount(code),
-        bypass_protocol: code.bypassProtocol ? true : false,
-      });
+      signals.push(signalFor(code, alias, prontos[i]));
     });
 
     const wig: Record<string, unknown> = {
@@ -296,6 +298,10 @@ export class WigFormat {
       // Clamp to the contract range; a raw bypass signal has no ditto grammar.
       code.dittoCount = code.bypassProtocol ? 0 : Math.min(DITTO_MAX, Math.max(0, Math.trunc(ditto)));
       code.bypassProtocol = signal.bypass_protocol ? true : false;
+      // send_count (how many times the whole signal transmits per press) is
+      // optional with a default of 1; validation guaranteed a positive integer
+      // when present, so preserve it for a wig->wig or later export round trip.
+      if (signal.send_count !== undefined) code.sendCount = signal.send_count as number;
       decoded.push(code);
     }
 
