@@ -1,5 +1,5 @@
-// HAIR wig (wireless infrared group) JSON import and export, ported from
-// IR::Format::WIG, aligned with the format contract at
+// HAIR wig JSON import and export, ported from
+// IR::Format::Wig, aligned with the format contract at
 // https://github.com/DAB-LABS/HAIR/blob/main/docs/wig-format.md.
 //
 // The wig format is the portable IR code set format used by the HAIR Home

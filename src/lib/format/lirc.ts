@@ -356,7 +356,7 @@ function decodeProtocolCodes(remote: LircRemote, converter: Converter): IRCode[]
       // A code composed from pre_data/post_data carries the wire's accumulated
       // byte order (e.g. Vizio Power 0x20DF10EF from pre_data 0x20DF + value
       // 0x10EF) and must be reduced to the display form via decodeByteOrder —
-      // exactly as WIG and CodesCSV NEC do — to land on 0x04FB08F7 (address 4,
+      // exactly as wig and CodesCSV NEC do — to land on 0x04FB08F7 (address 4,
       // subaddress -1, command 8) instead of decodeRaw's accumulated form
       // (address 32, command 16). A plain codes-section value is already in its
       // final form, so it keeps the raw decodeRaw path.

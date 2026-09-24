@@ -632,7 +632,7 @@ export class RemoteController {
   }
 
   private wigText(): string {
-    return this.converter.exportCodes('WIG', this.doc!.signals, this.wigOpts(this.doc!));
+    return this.converter.exportCodes('wig', this.doc!.signals, this.wigOpts(this.doc!));
   }
 
   // Download a wig for a given remote doc without opening it in the editor.
@@ -640,7 +640,7 @@ export class RemoteController {
   // search result row, without the editor scrolling into view.
   downloadWigFor(doc: RemoteDoc): void {
     const base = doc.meta.name || `${doc.meta.brand || ''} ${doc.meta.model || ''}`.trim() || 'remote';
-    downloadText(`${slugify(base)}.wig.json`, 'application/json', this.converter.exportCodes('WIG', doc.signals, this.wigOpts(doc)));
+    downloadText(`${slugify(base)}.wig.json`, 'application/json', this.converter.exportCodes('wig', doc.signals, this.wigOpts(doc)));
   }
 
   private downloadWig(): void {
@@ -694,7 +694,7 @@ export class RemoteController {
       extra[key] = parsed[key];
     }
     meta.extra = Object.keys(extra).length ? extra : undefined;
-    const signals = this.converter.importFormat('WIG', text);
+    const signals = this.converter.importFormat('wig', text);
     this.load({ meta, signals });
   }
 

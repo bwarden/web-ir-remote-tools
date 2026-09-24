@@ -102,7 +102,7 @@ export class Converter {
     this.registerFormat('Pronto', new ProntoFormat());
     this.registerFormat('CSV', new CsvFormat());
     this.registerFormat('CodesCSV', new CodesCsvFormat());
-    this.registerFormat('WIG', new WigFormat());
+    this.registerFormat('wig', new WigFormat());
     this.registerFormat('Tasmota', new TasmotaFormat());
     this.registerFormat('Mode2', new Mode2Format());
     this.registerFormat('LIRC', new LircFormat());

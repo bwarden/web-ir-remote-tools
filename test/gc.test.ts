@@ -59,9 +59,9 @@ test('GlobalCache is an alias for GCIR', () => {
 });
 
 test('the wig entry point imports a GC export interchangeably', () => {
-  const viaWig = converter.importFormat('WIG', gcJson);
+  const viaWig = converter.importFormat('wig', gcJson);
   const viaGc = converter.importFormat('GCIR', gcJson);
-  assert.deepEqual(viaWig, viaGc, 'WIG and GCIR produce identical codes');
+  assert.deepEqual(viaWig, viaGc, 'wig and GCIR produce identical codes');
   assert.equal(viaWig[0].protocol, 'NEC');
 });
 
@@ -96,7 +96,7 @@ test('a wig-shaped document is not treated as GC', () => {
 });
 
 // Real Global Cache export for an "Eufy 40 Bit" gadget (no registered
-// protocol names it). The Pronto hex must survive GC -> WIG -> GC verbatim.
+// protocol names it). The Pronto hex must survive GC -> wig -> GC verbatim.
 // Three commands extracted from a real GC export (workspace samples/); the
 // files themselves are local-only and never shipped with the build.
 const eufyGcJson = JSON.stringify({
@@ -122,7 +122,7 @@ const eufyGcJson = JSON.stringify({
   ],
 }, null, 2);
 
-test('unknown-protocol GC payload converts via WIG losslessly', () => {
+test('unknown-protocol GC payload converts via wig losslessly', () => {
   const orig = (JSON.parse(eufyGcJson).commands as Array<{ name: string; pronto: string }>)
     .find((c) => c.name === 'Auto')!.pronto;
 
@@ -134,20 +134,20 @@ test('unknown-protocol GC payload converts via WIG losslessly', () => {
   assert.equal(auto?.pronto, orig, 'original Pronto hex stashed');
   assert.equal(converter.exportCode(auto as never, 'Pronto'), orig, 'Pronto export re-emits stashed hex');
 
-  const wig = converter.exportCodes('WIG', codes);
+  const wig = converter.exportCodes('wig', codes);
   const doc = JSON.parse(wig) as { signals: Array<{ pronto: string; bypass_protocol?: boolean }> };
   assert.equal(doc.signals.length, codes.length, 'wig carries every signal');
   assert.equal(doc.signals[0].pronto, orig, 'wig keeps pronto hex verbatim');
 
-  const reimport = converter.importFormat('WIG', wig);
+  const reimport = converter.importFormat('wig', wig);
   assert.equal(reimport.find((c) => c.alias === 'Auto')?.pronto, orig, 'wig -> code keeps pronto hex');
 });
 
-test('a GC commands list is never emitted in a WIG export', () => {
+test('a GC commands list is never emitted in a wig export', () => {
   // OpenWig preserves every unknown GC top-level key and hands it to the wig
   // export as opts.extra. The commands list is the GC payload, not wig
   // metadata, so it must not surface in the downloaded wig.
-  const codes = converter.importFormat('WIG', eufyGcJson);
+  const codes = converter.importFormat('wig', eufyGcJson);
   const doc = JSON.parse(eufyGcJson) as Record<string, unknown>;
   const extra: Record<string, unknown> = {};
   for (const key of Object.keys(doc)) {
@@ -156,12 +156,12 @@ test('a GC commands list is never emitted in a WIG export', () => {
     }
   }
   assert.ok('commands' in extra, 'commands is an unknown top-level key to the editor');
-  const wig = JSON.parse(converter.exportCodes('WIG', codes, { name: 'R', extra })) as Record<string, unknown>;
+  const wig = JSON.parse(converter.exportCodes('wig', codes, { name: 'R', extra })) as Record<string, unknown>;
   assert.ok(!('commands' in wig), 'wig export drops the GC commands payload');
   assert.equal(wig.format, 'hair-wig/3', 'still a valid wig');
 });
 
-test('GC repeats survive into a WIG send_count', () => {
+test('GC repeats survive into a wig send_count', () => {
   // A real GC export records the repeat count as the trailing ":N" of the
   // keycode; some exports also carry an explicit per-command "repeats" field,
   // which wins when present. Both must land on the wig's send_count and ride
@@ -196,7 +196,7 @@ test('GC repeats survive into a WIG send_count', () => {
   assert.equal(byAlias.get('FromKeycode'), 3, 'a bare keycode ":N" suffix supplies the repeat');
   assert.equal(byAlias.get('NoRepeat')!, 0, 'no repeat recorded stays the single-press default');
 
-  const wig = JSON.parse(converter.exportCodes('WIG', codes)) as {
+  const wig = JSON.parse(converter.exportCodes('wig', codes)) as {
     signals: Array<{ alias: string; send_count?: number }>;
   };
   const signalByAlias = new Map(wig.signals.map((s) => [s.alias, s.send_count]));
@@ -204,7 +204,7 @@ test('GC repeats survive into a WIG send_count', () => {
   assert.equal(signalByAlias.get('FromKeycode'), 3, 'keycode-sourced repeat carries too');
   assert.ok(!('send_count' in wig.signals.find((s) => s.alias === 'NoRepeat')!), 'default single press is not written');
 
-  const reimport = converter.importFormat('WIG', JSON.stringify(wig));
+  const reimport = converter.importFormat('wig', JSON.stringify(wig));
   assert.equal(reimport.find((c) => c.alias === 'FieldWins')?.sendCount, 2, 'wig -> code keeps send_count');
   assert.equal(reimport.find((c) => c.alias === 'FromKeycode')?.sendCount, 3, 'keycode repeat round-trips');
 });

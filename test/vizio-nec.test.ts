@@ -4,7 +4,7 @@
 // The SAME Vizio NEC Power signal (once, the real Pronto) is imported from
 // three formats. LIRC NEC KEY_POWER traditionally came in accumulated form
 // (pre_data 0x20DF, value 0x10EF, full 0x20DF10EF, address=32 command=16),
-// while WIG and CodesCSV decode the identical signal to display form
+// while wig and CodesCSV decode the identical signal to display form
 // (address=4 subaddress=-1 command=8, data 0x04FB08F7). All NEC sources
 // MUST converge on the display form and export identical Tasmota/Pronto.
 //
@@ -121,7 +121,7 @@ const vizioPowerWig = JSON.stringify({"format": "hair-wig/1", "name": "Vizio TV"
 
 
 const loadLirc = (text: string) => converter.importFormat('LIRC', text);
-const loadWig = (text: string) => converter.importFormat('WIG', text);
+const loadWig = (text: string) => converter.importFormat('wig', text);
 const loadIrdb = (text: string) => converter.importFormat('CSV', text);
 
 test('LIRC NEC KEY_POWER decodes Vizio Power to 4,-1,8 (0x04FB08F7), not 32,-1,16', () => {
@@ -135,12 +135,12 @@ test('LIRC NEC KEY_POWER decodes Vizio Power to 4,-1,8 (0x04FB08F7), not 32,-1,1
   assert.equal(power.data, 0x04FB08F7);
 });
 
-test('LIRC/IDB/WIG NEC Power exports identical Tasmota and Pronto', () => {
+test('LIRC/IDB/wig NEC Power exports identical Tasmota and Pronto', () => {
   const lirc = loadLirc(vizioLcdTvLirc).find((c) => c.alias === 'KEY_POWER');
   const wig = loadWig(vizioPowerWig).find((c) => c.alias === 'Power');
   const irdb = loadIrdb(vizioIrdbCsv).find((c) => c.alias === 'KEY_POWER');
   assert.ok(lirc, 'LIRC KEY_POWER');
-  assert.ok(wig, 'WIG KEY_POWER');
+  assert.ok(wig, 'wig KEY_POWER');
   assert.ok(irdb, 'IRDB KEY_POWER');
 
   const tasmota = (code: IRCode) => converter.exportCode(code, 'Tasmota').trim();

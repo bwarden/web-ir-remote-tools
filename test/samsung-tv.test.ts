@@ -343,7 +343,7 @@ tele/tasmota/600605/RESULT {"IrReceived":{"Protocol":"SAMSUNG","Bits":32,"Data":
 `;
 
 
-// Samsung AA59-00666A TV remote WIG fixture
+// Samsung AA59-00666A TV remote wig fixture
 const wigText = samsungWig;
 const wigData = JSON.parse(wigText);
 
@@ -361,11 +361,11 @@ function lircSources(...pairs: [string, string][]): LircIndexSource[] {
   return pairs.map(([path, text]) => ({ path, text }));
 }
 
-// --- ProntoHex decode: Samsung TV Mute from the WIG -------------------------
+// --- ProntoHex decode: Samsung TV Mute from the wig -------------------------
 
-test('WIG Mute signal decodes as SAMSUNG with correct address and command', () => {
+test('wig Mute signal decodes as SAMSUNG with correct address and command', () => {
   const muteSignal = wigData.signals.find((s: any) => s.alias === 'Mute');
-  assert.ok(muteSignal, 'Mute signal found in WIG');
+  assert.ok(muteSignal, 'Mute signal found in wig');
   assert.ok(muteSignal.pronto, 'Mute signal has Pronto hex');
 
   const codes = converter.importFormat('Pronto', muteSignal.pronto);
@@ -465,11 +465,11 @@ test('SAMSUNG Mute matches LIRC KEY_MUTE in Samsung TV remote', () => {
   );
 });
 
-// --- WIG import: all signals decode as SAMSUNG family -----------------------
+// --- wig import: all signals decode as SAMSUNG family -----------------------
 
-test('all 44 WIG signals decode as SAMSUNG or SAMSUNG36', () => {
-  const codes = converter.importFormat('WIG', wigText);
-  assert.equal(codes.length, wigData.signals.length, 'every WIG signal imports');
+test('all 44 wig signals decode as SAMSUNG or SAMSUNG36', () => {
+  const codes = converter.importFormat('wig', wigText);
+  assert.equal(codes.length, wigData.signals.length, 'every wig signal imports');
 
   const protocols = new Set(codes.map((c) => c.protocol));
   for (const p of protocols) {
@@ -487,10 +487,10 @@ test('all 44 WIG signals decode as SAMSUNG or SAMSUNG36', () => {
   }
 });
 
-// --- WIG Samsung/Samsung36 variant identification ---------------------------
+// --- wig Samsung/Samsung36 variant identification ---------------------------
 
-test('WIG import identifies Samsung36 signals correctly', () => {
-  const codes = converter.importFormat('WIG', wigText);
+test('wig import identifies Samsung36 signals correctly', () => {
+  const codes = converter.importFormat('wig', wigText);
   const byAlias = new Map(codes.map((c) => [c.alias, c]));
 
   // Most buttons should be SAMSUNG (32-bit), some might be SAMSUNG36
@@ -537,10 +537,10 @@ test('NECX2 Samsung TV entries are reachable via SAMSUNG keys', () => {
   );
 });
 
-// --- Pronto timing decode: WIG signals survive roundtrip --------------------
+// --- Pronto timing decode: wig signals survive roundtrip --------------------
 
-test('WIG Samsung signals roundtrip through Pronto timing decode', () => {
-  const codes = converter.importFormat('WIG', wigText);
+test('wig Samsung signals roundtrip through Pronto timing decode', () => {
+  const codes = converter.importFormat('wig', wigText);
   const mute = codes.find((c) => c.alias === 'Mute');
   assert.ok(mute, 'Mute found');
 
@@ -581,12 +581,12 @@ test('conv-samsung.tsv Mute fixture roundtrips', () => {
   assert.equal(back.command, parseInt(cols[9]));
 });
 
-// --- Tasmota log: all AA59-00666A captures decode and match WIG signals ------
+// --- Tasmota log: all AA59-00666A captures decode and match wig signals ------
 
 const tasmotaLogText = samsungTasmotaLog;
 
-// Build WIG lookup: numeric DataLSB → alias
-const wigCodes = converter.importFormat('WIG', wigText);
+// Build wig lookup: numeric DataLSB → alias
+const wigCodes = converter.importFormat('wig', wigText);
 const wigByData = new Map<number, { alias: string; protocol: string; address: number; command: number }>();
 for (const c of wigCodes) {
   wigByData.set(Number(c.data), { alias: c.alias, protocol: c.protocol, address: c.address, command: c.command });
@@ -631,7 +631,7 @@ test('Tasmota structured fields and RawData timing agree for all captures', () =
   }
 });
 
-test('every Tasmota capture maps to a WIG button (44 of 44)', () => {
+test('every Tasmota capture maps to a wig button (44 of 44)', () => {
   const matched = new Set<string>();
   const unmatched: string[] = [];
 
@@ -646,10 +646,10 @@ test('every Tasmota capture maps to a WIG button (44 of 44)', () => {
   }
 
   assert.equal(unmatched.length, 0, `no unmatched Tasmota captures: ${unmatched.join('; ')}`);
-  assert.equal(matched.size, 44, '44 unique WIG buttons matched');
+  assert.equal(matched.size, 44, '44 unique wig buttons matched');
 });
 
-test('all WIG buttons are covered by Tasmota captures', () => {
+test('all wig buttons are covered by Tasmota captures', () => {
   const tasmotaDataValues = new Set<number>();
   for (const line of tasmotaLines) {
     const code = converter.importFormat('Tasmota', line)[0];
@@ -657,7 +657,7 @@ test('all WIG buttons are covered by Tasmota captures', () => {
   }
 
   const missingWig = wigCodes.filter((c) => !tasmotaDataValues.has(Number(c.data)));
-  assert.equal(missingWig.length, 0, 'all WIG buttons have a matching Tasmota capture');
+  assert.equal(missingWig.length, 0, 'all wig buttons have a matching Tasmota capture');
 });
 
 test('Tasmota Samsung TV commands cover all numeric keys, vol, ch, and transport', () => {

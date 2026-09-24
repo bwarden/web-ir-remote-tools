@@ -265,12 +265,12 @@ for (const btn of buttons) {
 }
 
 // The Global Caché json export was embedded below from a workspace-only capture
-// (its per-button hex is also carried as literals above); the GCIR and WIG
+// (its per-button hex is also carried as literals above); the GCIR and wig
 // entry points must parse it interchangeably.
 test('RM-SG20 GC json imports in place of the embedded hex', () => {
   const viaGc = converter.importFormat('GCIR', rmSg20GcJson);
-  const viaWig = converter.importFormat('WIG', rmSg20GcJson);
-  assert.deepEqual(viaWig, viaGc, 'WIG entry point imports the GC export interchangeably');
+  const viaWig = converter.importFormat('wig', rmSg20GcJson);
+  assert.deepEqual(viaWig, viaGc, 'wig entry point imports the GC export interchangeably');
 
   for (const btn of buttons) {
     const code = viaGc.find((c) => c.alias === btn.capture);

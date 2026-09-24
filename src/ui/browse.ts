@@ -113,7 +113,7 @@ export function initBrowseTab(
         e.stopPropagation();
         void openIrdbDevice(dev);
       });
-      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download WIG' });
+      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download wig' });
       downloadBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         void downloadIrdbDevice(dev);
@@ -272,7 +272,7 @@ export function initBrowseTab(
         e.stopPropagation();
         void openLircDevice(dev);
       });
-      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download WIG' });
+      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download wig' });
       downloadBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         void downloadLircDevice(dev);

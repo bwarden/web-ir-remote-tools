@@ -644,7 +644,7 @@ test('wig export and roundtrip', () => {
     new IRCode({ protocol: 'SAMSUNG', bits: 32, data: 0x070702fd, address: 0xe0, command: 0x40, alias: 'POWER-SAM' }),
   ];
 
-  const wigText = converter.exportCodes('WIG', codes, { name: 'Test Remote', brand: 'Acme', model: 'X-1' });
+  const wigText = converter.exportCodes('wig', codes, { name: 'Test Remote', brand: 'Acme', model: 'X-1' });
   const data = JSON.parse(wigText);
   assert.equal(data.format, 'hair-wig/3');
   assert.equal(data.name, 'Test Remote');
@@ -665,7 +665,7 @@ test('wig export and roundtrip', () => {
   assert.equal(byAlias.get('MUTE').ditto_count, 0, 'JVC is not NEC-family, so ditto_count is always 0');
   assert.equal(byAlias.get('MUTE').bypass_protocol, true);
 
-  const back = converter.importFormat('WIG', wigText);
+  const back = converter.importFormat('wig', wigText);
   assert.equal(back.length, 3);
   const byAliasBack = new Map(back.map((c) => [c.alias, c]));
   assert.equal(byAliasBack.get('POWER')!.data, 0x10ef00ff, 'NEC POWER data survives wig roundtrip');
@@ -685,7 +685,7 @@ test('wig export names unknown commands and drops unnamed duplicates', () => {
     new IRCode({ protocol: 'JVC', bits: 16, address: 67, command: 17, alias: '' }),
   ];
 
-  const wigText = converter.exportCodes('WIG', codes, { name: 'Test' });
+  const wigText = converter.exportCodes('wig', codes, { name: 'Test' });
   const data = JSON.parse(wigText);
   const aliases: string[] = data.signals.map((s: any) => s.alias);
   assert.equal(data.signals.length, 4, 'unnamed duplicates of named commands are dropped');
@@ -699,7 +699,7 @@ test('wig export names unknown commands and drops unnamed duplicates', () => {
     assert.ok(typeof a === 'string' && a !== '', `every alias is non-empty (got ${JSON.stringify(a)})`);
   }
 
-  const back = converter.importFormat('WIG', wigText);
+  const back = converter.importFormat('wig', wigText);
   assert.equal(back.length, 4, 'the wig roundtrips once aliases are non-empty');
 });
 
@@ -708,7 +708,7 @@ test('wig export keeps UNKNOWN names unique', () => {
     new IRCode({ protocol: 'JVC', bits: 16, data: 0x4310, address: 67, command: 16, alias: '' }),
     new IRCode({ protocol: 'JVC', bits: 16, data: 0x4110, address: 65, command: 16, alias: '' }),
   ];
-  const aliases = JSON.parse(converter.exportCodes('WIG', codes, { name: 'Test' })).signals.map((s: any) => s.alias);
+  const aliases = JSON.parse(converter.exportCodes('wig', codes, { name: 'Test' })).signals.map((s: any) => s.alias);
   assert.deepEqual(
     new Set(aliases),
     new Set(['UNKNOWN 16', 'UNKNOWN 16_2']),
@@ -718,30 +718,30 @@ test('wig export keeps UNKNOWN names unique', () => {
 
 test('wig import validates all-or-nothing with field-level reasons', () => {
   const code = new IRCode({ protocol: 'NEC', bits: 32, data: 0x10ef00ff, address: 0x10, subaddress: -1, command: 0, alias: 'POWER' });
-  const wigText = converter.exportCodes('WIG', [code], { name: 'Test' });
+  const wigText = converter.exportCodes('wig', [code], { name: 'Test' });
   const data = JSON.parse(wigText);
 
   assert.throws(
-    () => converter.importFormat('WIG', JSON.stringify({ ...data, name: '' })),
+    () => converter.importFormat('wig', JSON.stringify({ ...data, name: '' })),
     /name: required/,
     'name is required',
   );
   assert.throws(
-    () => converter.importFormat('WIG', JSON.stringify({ ...data, format: 'hair-wig/4' })),
+    () => converter.importFormat('wig', JSON.stringify({ ...data, format: 'hair-wig/4' })),
     /newer than this tool/,
     'a higher major version is refused with a version message',
   );
   assert.throws(
-    () => converter.importFormat('WIG', JSON.stringify({ ...data, signals: [] })),
+    () => converter.importFormat('wig', JSON.stringify({ ...data, signals: [] })),
     /must not be empty/,
     'an empty signals list is refused',
   );
   assert.throws(
-    () => converter.importFormat('WIG', JSON.stringify({ ...data, signals: undefined })),
+    () => converter.importFormat('wig', JSON.stringify({ ...data, signals: undefined })),
     /signals: required/,
   );
   assert.throws(
-    () => converter.importFormat('WIG', JSON.stringify({ ...data, climate: { min_temp: 16, max_temp: 30 } })),
+    () => converter.importFormat('wig', JSON.stringify({ ...data, climate: { min_temp: 16, max_temp: 30 } })),
     /climate/,
     'matrix wigs are refused, not half-imported',
   );
@@ -756,7 +756,7 @@ test('wig import validates all-or-nothing with field-level reasons', () => {
     }],
   };
   try {
-    converter.importFormat('WIG', JSON.stringify(bad));
+    converter.importFormat('wig', JSON.stringify(bad));
     assert.fail('a wig with several malformed fields should throw');
   } catch (e) {
     const msg = (e as Error).message;
@@ -766,7 +766,7 @@ test('wig import validates all-or-nothing with field-level reasons', () => {
   }
 
   assert.equal(
-    converter.importFormat('WIG', JSON.stringify({ ...data, format: 'hair-wig/2' })).length,
+    converter.importFormat('wig', JSON.stringify({ ...data, format: 'hair-wig/2' })).length,
     1,
     'older majors still read',
   );
@@ -777,13 +777,13 @@ test('wig import validates all-or-nothing with field-level reasons', () => {
     supersedes: '00000000-0000-4000-8000-000000000000',
     some_future_key: { anything: true },
   };
-  const back = converter.importFormat('WIG', JSON.stringify(extra));
+  const back = converter.importFormat('wig', JSON.stringify(extra));
   assert.equal(back[0].data, 0x10ef00ff, 'unknown and optional metadata keys are tolerated');
 });
 
 test('wig export preserves unknown and optional top-level keys', () => {
   const code = new IRCode({ protocol: 'NEC', bits: 32, data: 0x10ef00ff, address: 0x10, subaddress: -1, command: 0, alias: 'POWER' });
-  const wigText = converter.exportCodes('WIG', [code], {
+  const wigText = converter.exportCodes('wig', [code], {
     name: 'Test',
     wigId: '00000000-0000-4000-8000-000000000000',
     origin: 'captured',
@@ -802,14 +802,14 @@ test('wig export preserves unknown and optional top-level keys', () => {
   assert.deepEqual(data.supersedes, ['aaa']);
   assert.deepEqual(data.some_future_key, { x: 1 }, 'an unknown key rides through untouched');
 
-  const back = converter.importFormat('WIG', wigText);
+  const back = converter.importFormat('wig', wigText);
   assert.equal(back[0].data, 0x10ef00ff, 'preserved keys do not disturb the signals');
 });
 
 test('SAMSUNG data survives wig roundtrip as 0x070702FD', () => {
   const code = new IRCode({ protocol: 'SAMSUNG', bits: 32, data: 0x070702fd, address: 0xe0, command: 0x40, alias: 'POWER' });
-  const wigText = converter.exportCodes('WIG', [code]);
-  const back = converter.importFormat('WIG', wigText)[0];
+  const wigText = converter.exportCodes('wig', [code]);
+  const back = converter.importFormat('wig', wigText)[0];
   assert.equal(back.data, 0x070702fd);
   assert.equal('0x' + toHex(back.data!, 8), '0x070702FD');
 });
@@ -819,7 +819,7 @@ test('wig export enforces the format contract on ditto_count and kind', () => {
   const bypass = new IRCode({ protocol: 'NEC', bits: 32, data: 0x10ef00ff, address: 0x10, subaddress: -1, command: 0, alias: 'PINNED', dittoCount: 4, bypassProtocol: true });
   const samsung = new IRCode({ protocol: 'SAMSUNG', bits: 32, data: 0x070702fd, address: 0xe0, command: 0x40, alias: 'POWER-SAM', dittoCount: 2 });
 
-  const wigText = converter.exportCodes('WIG', [nec, bypass, samsung], { name: 'Contract', kind: 'Sound Bar', model: 'X' });
+  const wigText = converter.exportCodes('wig', [nec, bypass, samsung], { name: 'Contract', kind: 'Sound Bar', model: 'X' });
   const data = JSON.parse(wigText);
   assert.equal(data.kind, 'soundbar', 'kind is squashed to lowercase letters and digits');
   const byAlias = new Map<any, any>(data.signals.map((s: any) => [s.alias, s]));
@@ -827,7 +827,7 @@ test('wig export enforces the format contract on ditto_count and kind', () => {
   assert.equal(byAlias.get('PINNED').ditto_count, 0, 'a bypassed signal cannot carry ditto_count');
   assert.equal(byAlias.get('POWER-SAM').ditto_count, 0, 'a non-NEC signal always reads 0');
 
-  const back = converter.importFormat('WIG', wigText);
+  const back = converter.importFormat('wig', wigText);
   const byAliasBack = new Map(back.map((c) => [c.alias, c]));
   assert.equal(byAliasBack.get('POWER')!.dittoCount, 3, 'ditto count survives the roundtrip');
   assert.equal(byAliasBack.get('PINNED')!.dittoCount, 0, 'bypass forces ditto_count 0 on read too');
