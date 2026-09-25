@@ -67,7 +67,7 @@ import { ProntoFormat } from './format/pronto.js';
 import { CsvFormat } from './format/csv.js';
 import { CodesCsvFormat } from './format/codesCsv.js';
 import { WigFormat } from './format/wig.js';
-import { GcFormat } from './format/gc.js';
+import { JsonFormat } from './format/json.js';
 import { TasmotaFormat } from './format/tasmota.js';
 import { Mode2Format } from './format/mode2.js';
 import { LircFormat } from './format/lirc.js';
@@ -106,9 +106,7 @@ export class Converter {
     this.registerFormat('Tasmota', new TasmotaFormat());
     this.registerFormat('Mode2', new Mode2Format());
     this.registerFormat('LIRC', new LircFormat());
-    const gc = new GcFormat();
-    this.registerFormat('GCIR', gc);
-    this.registerFormat('GlobalCache', gc);
+    this.registerFormat('JSON', new JsonFormat());
   }
 
   registerProtocol(handler: ProtocolHandler): void {

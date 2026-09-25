@@ -12,7 +12,7 @@
 
 import { IRCode } from '../code.js';
 import type { Converter } from '../converter.js';
-import { GcFormat } from './gc.js';
+import { JsonFormat } from './json.js';
 
 export const WIG_FORMAT_VERSION = 'hair-wig/3';
 
@@ -148,10 +148,10 @@ export class WigFormat {
     // Preserved keys land last so they win over the defaults above (a file
     // that came in with its own wig_id, origin, or notes keeps them).
     for (const [key, value] of Object.entries(opts.extra ?? {})) {
-      // "commands" is the Global Caché payload the wig entry point swaps on
-      // (a document with a commands list and no format is GC, not wig), so it
-      // is never wig metadata and never rides along into a wig export; an
-      // editor that preserves unknown keys keeps it until export, where it
+      // "commands" is the JSON dump payload the wig entry point swaps on
+      // (a document with a commands list and no format is the dump, not wig),
+      // so it is never wig metadata and never rides along into a wig export;
+      // an editor that preserves unknown keys keeps it until export, where it
       // must drop it.
       if (key === 'commands') continue;
       wig[key] = value;
@@ -192,11 +192,11 @@ export class WigFormat {
 
     const wig = data as Record<string, unknown>;
 
-    // A Global Caché IR database export (a "commands" list with raw Pronto
-    // hex payloads, no hair-wig "format" field) carries the same signals a
-    // wig does, so the wig entry point imports it interchangeably.
+    // A JSON IR database document (a "commands" list with raw Pronto hex
+    // payloads, no hair-wig "format" field) carries the same signals a wig
+    // does, so the wig entry point imports it interchangeably.
     if (wig.format === undefined && Array.isArray(wig.commands)) {
-      return new GcFormat().decode(input, converter);
+      return new JsonFormat().decode(input, converter);
     }
 
     if (typeof wig.format !== 'string' || !/^hair-wig\/\d+$/.test(wig.format)) {

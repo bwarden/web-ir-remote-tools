@@ -28,9 +28,9 @@ export class IRCode {
   device = '';
   dittoCount = 0;
   // How many times the whole signal transmits per press (the wig's
-  // send_count, the GC IR database's per-command repeats). 0 means the source
-  // carried no repeat count, so a wig export omits send_count and the default
-  // single press is assumed.
+  // send_count, the repeat hint a JSON dump's keycode carries). 0 means the
+  // source carried no repeat count, so a wig export omits send_count and the
+  // default single press is assumed.
   sendCount = 0;
   bypassProtocol = false;
   timings?: number[];

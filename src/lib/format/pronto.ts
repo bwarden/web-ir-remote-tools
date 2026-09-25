@@ -27,7 +27,7 @@ export class ProntoFormat {
   // each registered protocol's decodeTiming in registration order. Returns
   // the first matching IRCode. A well-formed string no protocol recognizes
   // decodes to an opaque UNKNOWN code (bypassProtocol set, original hex
-  // stashed) so container conversions that move Pronto hex (Global Cache to
+  // stashed) so container conversions that move Pronto hex (a JSON dump to
   // wig, and so on) still complete. Malformed strings throw.
   decode(prontoStr: string, converter: Converter): IRCode[] {
     if (prontoStr === undefined || prontoStr === null) {
@@ -77,7 +77,7 @@ export class ProntoFormat {
     // No registered protocol matched. A payload with real timing data is
     // still valid raw Pronto Hex, so keep it as an opaque UNKNOWN code
     // rather than failing: container conversions that just move Pronto hex
-    // (e.g. Global Cache to wig) must not depend on naming the protocol. The
+    // (e.g. a JSON dump to wig) must not depend on naming the protocol. The
     // original hex is stashed verbatim (lossless re-export) and the
     // mark/space timings are kept for the other timing formats. A truncated
     // or empty payload is malformed, not merely unknown, and still throws.

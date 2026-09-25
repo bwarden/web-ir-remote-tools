@@ -1,7 +1,6 @@
-// Global Caché IR database JSON import, ported to sit alongside the wig
-// importer.  Global Caché hardware ("iTach", "GC-100" line) exports its IR
-// code database as one JSON document per remote with a "commands" list; each
-// command is:
+// JSON IR database import, ported to sit alongside the wig importer. The
+// format is JSON: one document per remote with a "commands" list, each
+// command being:
 //
 //   {
 //     "keycode": "G:Memorex 32 Bit:()(0xC100E01F)():3",
@@ -10,23 +9,23 @@
 //     "protocol": "Memorex 32 Bit"
 //   }
 //
-// The signal payload is raw Pronto hex, exactly as a HAIR wig carries, so a
-// GC export imports to the same IRCode list a wig would.  The wig importer
+// The signal payload is raw Pronto hex, exactly as a HAIR wig carries, so
+// this format imports to the same IRCode list a wig would.  The wig importer
 // auto-detects this shape, so the two formats interchange freely at the
 // converter entry point.  Import-only: the opaque "keycode"/"protocol"
-// strings are Global Caché's own naming, so we never re-export this format.
+// strings are the dump's own naming, so we never re-export this format.
 import { IRCode } from '../code.js';
 import type { Converter } from '../converter.js';
 
-export class GcFormat {
-  // Parse a Global Caché IR database JSON string into IRCode objects.
+export class JsonFormat {
+  // Parse a JSON IR database document into IRCode objects.
   // Validation is all-or-nothing and field-level, mirroring the wig
   // importer: every problem is reported at once with a "commands[i].field"
     // reason and a malformed file is rejected wholesale. Commands that carry
     // no Pronto payload (a compact export may list buttons it never captured
     // a signal for) are skipped rather than failing the import.
   decode(input: unknown, converter: Converter): IRCode[] {
-    if (input === undefined || input === null) throw new Error('No GC input provided');
+    if (input === undefined || input === null) throw new Error('No JSON input provided');
 
     let text = String(input);
     if (text.charCodeAt(0) === 0xfeff) text = text.slice(1); // Strip UTF-8 BOM
@@ -35,16 +34,16 @@ export class GcFormat {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error(`gc: not valid JSON (${(e as Error).message})`);
+      throw new Error(`json: not valid JSON (${(e as Error).message})`);
     }
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
-      throw new Error('gc: top level must be a JSON object');
+      throw new Error('json: top level must be a JSON object');
     }
 
-    const gc = data as Record<string, unknown>;
+    const doc = data as Record<string, unknown>;
     const reasons: string[] = [];
 
-    const commands = gc.commands;
+    const commands = doc.commands;
     if (commands === undefined) {
       reasons.push('commands: required');
     } else if (!Array.isArray(commands)) {
@@ -79,7 +78,7 @@ export class GcFormat {
     }
 
     if (reasons.length) {
-      throw new Error(`gc failed validation:\n${reasons.join('\n')}`);
+      throw new Error(`json failed validation:\n${reasons.join('\n')}`);
     }
 
     const decoded: IRCode[] = [];
@@ -88,20 +87,20 @@ export class GcFormat {
       if (typeof command.pronto !== 'string' || command.pronto.trim() === '') continue;
       const code = converter.importFormat('Pronto', command.pronto)[0];
       code.alias = command.name as string;
-      code.sendCount = gcRepeatCount(command);
+      code.sendCount = jsonRepeatCount(command);
       decoded.push(code);
     }
     return decoded;
   }
 }
 
-// The repeat count of a GC command: how many times the whole code replays
+// The repeat count of a JSON command: how many times the whole code replays
 // upon transmission. A raw IR database export records it two ways — a
 // per-command "repeats" integer in some exports, and always as the trailing
 // ":N" segment of the keycode (e.g. "G:Eufy 40 Bit:()(0x68A0000008)():3").
 // 0 means no count was recorded, which the wig exporter reads as the default
 // single press.
-function gcRepeatCount(command: Record<string, unknown>): number {
+function jsonRepeatCount(command: Record<string, unknown>): number {
   const r = command.repeats;
   if (typeof r === 'number' && Number.isInteger(r) && r >= 1) return r;
   if (typeof r === 'string' && /^\d+$/.test(r)) {

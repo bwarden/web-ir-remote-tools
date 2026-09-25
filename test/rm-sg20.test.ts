@@ -112,7 +112,7 @@ end remote
 
 `;
 
-const rmSg20GcJson = String.raw`{"commands": [
+const rmSg20Doc = String.raw`{"commands": [
 {"keycode":"G:Memorex 32 Bit:()(0xC100E01F)():3","name":"AmFmToggle","pronto":"0000 006D 0022 0000 0156 00AB 0017 003D 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 003D 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 0663","protocol":"Memorex 32 Bit"},
 {"keycode":"G:Memorex 32 Bit:()(0xC100BA45)():3","name":"Clocklight","pronto":"0000 006D 0022 0000 0156 00AB 0017 003D 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 0013 0017 003D 0017 003D 0017 003D 0017 0013 0017 003D 0017 0013 0017 0013 0017 003D 0017 0013 0017 0013 0017 0013 0017 003D 0017 0013 0017 003D 0017 0663","protocol":"Memorex 32 Bit"},
 {"keycode":"G:Memorex 32 Bit:()(0xC1006996)():3","name":"FastForward","pronto":"0000 006D 0022 0000 0156 00AB 0017 003D 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 003D 0017 0013 0017 003D 0017 0013 0017 0013 0017 003D 0017 003D 0017 0013 0017 0013 0017 003D 0017 0013 0017 003D 0017 003D 0017 0013 0017 0663","protocol":"Memorex 32 Bit"},
@@ -264,17 +264,17 @@ for (const btn of buttons) {
   });
 }
 
-// The Global Caché json export was embedded below from a workspace-only capture
-// (its per-button hex is also carried as literals above); the GCIR and wig
-// entry points must parse it interchangeably.
-test('RM-SG20 GC json imports in place of the embedded hex', () => {
-  const viaGc = converter.importFormat('GCIR', rmSg20GcJson);
-  const viaWig = converter.importFormat('wig', rmSg20GcJson);
-  assert.deepEqual(viaWig, viaGc, 'wig entry point imports the GC export interchangeably');
+// The JSON dump was embedded below from a workspace-only capture (its
+// per-button hex is also carried as literals above); the JSON and wig entry
+// points must parse it interchangeably.
+test('RM-SG20 JSON dump imports in place of the embedded hex', () => {
+  const viaJson = converter.importFormat('JSON', rmSg20Doc);
+  const viaWig = converter.importFormat('wig', rmSg20Doc);
+  assert.deepEqual(viaWig, viaJson, 'wig entry point imports the JSON dump interchangeably');
 
   for (const btn of buttons) {
-    const code = viaGc.find((c) => c.alias === btn.capture);
-    assert.ok(code, `GC import has ${btn.capture}`);
+    const code = viaJson.find((c) => c.alias === btn.capture);
+    assert.ok(code, `JSON import has ${btn.capture}`);
     assert.equal(code.protocol, 'NEC', `${btn.capture} protocol`);
     assert.equal(code.address, ADDR, `${btn.capture} address`);
     assert.equal(code.command, btn.command, `${btn.capture} command`);

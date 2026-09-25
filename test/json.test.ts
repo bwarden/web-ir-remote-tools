@@ -1,6 +1,6 @@
-// Global Caché IR database JSON import: field names differ from HAIR wig
+// JSON IR database import: field names differ from HAIR wig
 // ("commands" list with name/pronto/keycode/protocol) but the signal payload
-// is the same raw Pronto hex, so both the explicit GCIR/GlobalCache formats
+// is the same raw Pronto hex, so both the explicit JSON format and the wig
 // and the wig entry point must import it to the same IRCode list.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,10 +9,10 @@ import { bitReverseBytes } from '../src/lib/code.js';
 
 const converter = new Converter();
 
-// Two RM-SG20 (NEC, address 131 = 0x83) buttons in the Global Caché database
+// Two RM-SG20 (NEC, address 131 = 0x83) buttons in the JSON database
 // shape. The keycode value is the accumulated wire word; the Pronto hex is
 // the same timing the wig importer would carry.
-const gcJson = JSON.stringify({
+const jsonDoc = JSON.stringify({
   commands: [
     {
       keycode: 'G:Memorex 32 Bit:()(0xC10000FF)():3',
@@ -32,8 +32,8 @@ const gcJson = JSON.stringify({
 // The NEC display word for address 131/subaddress 0 and a command byte.
 const displayFor = (cmd: number) => (0x83 << 24) | ((cmd & 0xff) << 8) | (~cmd & 0xff);
 
-test('GCIR imports the commands as Pronto-decoded IRCode', () => {
-  const codes = converter.importFormat('GCIR', gcJson);
+test('JSON imports the commands as Pronto-decoded IRCode', () => {
+  const codes = converter.importFormat('JSON', jsonDoc);
   assert.equal(codes.length, 2, 'two commands imported');
 
   const [power, vol] = codes;
@@ -52,20 +52,20 @@ test('GCIR imports the commands as Pronto-decoded IRCode', () => {
   assert.equal(bitReverseBytes(vol.data as number, vol.bits), 0xc10040bf);
 });
 
-test('GlobalCache is an alias for GCIR', () => {
-  const a = converter.importFormat('GlobalCache', gcJson);
-  const b = converter.importFormat('GCIR', gcJson);
+test('the format name is case-insensitive', () => {
+  const a = converter.importFormat('json', jsonDoc);
+  const b = converter.importFormat('JSON', jsonDoc);
   assert.deepEqual(a, b);
 });
 
-test('the wig entry point imports a GC export interchangeably', () => {
-  const viaWig = converter.importFormat('wig', gcJson);
-  const viaGc = converter.importFormat('GCIR', gcJson);
-  assert.deepEqual(viaWig, viaGc, 'wig and GCIR produce identical codes');
+test('the wig entry point imports a JSON dump interchangeably', () => {
+  const viaWig = converter.importFormat('wig', jsonDoc);
+  const viaJson = converter.importFormat('JSON', jsonDoc);
+  assert.deepEqual(viaWig, viaJson, 'wig and JSON produce identical codes');
   assert.equal(viaWig[0].protocol, 'NEC');
 });
 
-test('GC validation is all-or-nothing with field-level reasons', () => {
+test('JSON validation is all-or-nothing with field-level reasons', () => {
   for (const [text, reason] of [
     ['{ not json', /not valid JSON/],
     ['[1,2,3]', /top level must be a JSON object/],
@@ -75,12 +75,12 @@ test('GC validation is all-or-nothing with field-level reasons', () => {
     ['{"commands": [{"name": "", "pronto": "0000 006D 0022 0000"}]}', /commands\[0\]\.name: required/],
     ['{"commands": [{"name": "X", "pronto": "nonsense"}]}', /commands\[0\]\.pronto/],
   ] as [string, RegExp][]) {
-    assert.throws(() => converter.importFormat('GCIR', text), reason, `rejects: ${text.slice(0, 40)}`);
+    assert.throws(() => converter.importFormat('JSON', text), reason, `rejects: ${text.slice(0, 40)}`);
   }
 });
 
-test('GC skips commands without a Pronto payload', () => {
-  const codes = converter.importFormat('GCIR', JSON.stringify({
+test('JSON skips commands without a Pronto payload', () => {
+  const codes = converter.importFormat('JSON', JSON.stringify({
     commands: [
       { name: 'NoSignal' },
       { name: 'Real', pronto: '0000 006D 0002 0000 0071 0072 0013 0013' },
@@ -90,16 +90,16 @@ test('GC skips commands without a Pronto payload', () => {
   assert.equal(codes[0].alias, 'Real');
 });
 
-test('a wig-shaped document is not treated as GC', () => {
+test('a wig-shaped document is not treated as a JSON dump', () => {
   const wig = JSON.stringify({ format: 'hair-wig/3', name: 'R', signals: [] });
-  assert.throws(() => converter.importFormat('GCIR', wig), /commands: required/);
+  assert.throws(() => converter.importFormat('JSON', wig), /commands: required/);
 });
 
-// Real Global Cache export for an "Eufy 40 Bit" gadget (no registered
-// protocol names it). The Pronto hex must survive GC -> wig -> GC verbatim.
-// Three commands extracted from a real GC export (workspace samples/); the
+// A real JSON dump code set for an "Eufy 40 Bit" gadget (no registered
+// protocol names it). The Pronto hex must survive JSON -> wig -> JSON verbatim.
+// Three commands extracted from a real dump (workspace samples/); the
 // files themselves are local-only and never shipped with the build.
-const eufyGcJson = JSON.stringify({
+const eufyDoc = JSON.stringify({
   commands: [
     {
       keycode: 'G:Eufy 40 Bit:()(0x68A0000008)():3',
@@ -122,11 +122,11 @@ const eufyGcJson = JSON.stringify({
   ],
 }, null, 2);
 
-test('unknown-protocol GC payload converts via wig losslessly', () => {
-  const orig = (JSON.parse(eufyGcJson).commands as Array<{ name: string; pronto: string }>)
+test('unknown-protocol JSON payload converts via wig losslessly', () => {
+  const orig = (JSON.parse(eufyDoc).commands as Array<{ name: string; pronto: string }>)
     .find((c) => c.name === 'Auto')!.pronto;
 
-  const codes = converter.importFormat('GCIR', eufyGcJson);
+  const codes = converter.importFormat('JSON', eufyDoc);
   assert.equal(codes.length, 3, 'every command imported (all three unknown)');
   const auto = codes.find((c) => c.alias === 'Auto');
   assert.equal(auto?.protocol, 'UNKNOWN', 'unknown protocol imports as UNKNOWN');
@@ -143,12 +143,12 @@ test('unknown-protocol GC payload converts via wig losslessly', () => {
   assert.equal(reimport.find((c) => c.alias === 'Auto')?.pronto, orig, 'wig -> code keeps pronto hex');
 });
 
-test('a GC commands list is never emitted in a wig export', () => {
-  // OpenWig preserves every unknown GC top-level key and hands it to the wig
-  // export as opts.extra. The commands list is the GC payload, not wig
+test('a JSON commands list is never emitted in a wig export', () => {
+  // OpenWig preserves every unknown top-level key and hands it to the wig
+  // export as opts.extra. The commands list is the dump payload, not wig
   // metadata, so it must not surface in the downloaded wig.
-  const codes = converter.importFormat('wig', eufyGcJson);
-  const doc = JSON.parse(eufyGcJson) as Record<string, unknown>;
+  const codes = converter.importFormat('wig', eufyDoc);
+  const doc = JSON.parse(eufyDoc) as Record<string, unknown>;
   const extra: Record<string, unknown> = {};
   for (const key of Object.keys(doc)) {
     if (!['format', 'name', 'brand', 'model', 'kind', 'signals', 'climate'].includes(key)) {
@@ -157,12 +157,12 @@ test('a GC commands list is never emitted in a wig export', () => {
   }
   assert.ok('commands' in extra, 'commands is an unknown top-level key to the editor');
   const wig = JSON.parse(converter.exportCodes('wig', codes, { name: 'R', extra })) as Record<string, unknown>;
-  assert.ok(!('commands' in wig), 'wig export drops the GC commands payload');
+  assert.ok(!('commands' in wig), 'wig export drops the JSON commands payload');
   assert.equal(wig.format, 'hair-wig/3', 'still a valid wig');
 });
 
-test('GC repeats survive into a wig send_count', () => {
-  // A real GC export records the repeat count as the trailing ":N" of the
+test('JSON repeats survive into a wig send_count', () => {
+  // A real dump records the repeat count as the trailing ":N" of the
   // keycode; some exports also carry an explicit per-command "repeats" field,
   // which wins when present. Both must land on the wig's send_count and ride
   // a wig -> wig round trip.
@@ -190,7 +190,7 @@ test('GC repeats survive into a wig send_count', () => {
     ],
   });
 
-  const codes = converter.importFormat('GCIR', fieldRepeats);
+  const codes = converter.importFormat('JSON', fieldRepeats);
   const byAlias = new Map(codes.map((c) => [c.alias, c.sendCount]));
   assert.equal(byAlias.get('FieldWins'), 2, 'the repeats field wins over the keycode suffix');
   assert.equal(byAlias.get('FromKeycode'), 3, 'a bare keycode ":N" suffix supplies the repeat');
