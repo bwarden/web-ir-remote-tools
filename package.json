@@ -1,6 +1,6 @@
 {
   "name": "ir-remote-tools",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Browser-based IR remote code tools: IRDB lookup and IR format conversion on GitHub Pages",
   "type": "module",
   "private": true,
