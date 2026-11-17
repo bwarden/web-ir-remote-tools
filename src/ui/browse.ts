@@ -46,8 +46,7 @@ export function initBrowseTab(
   const modelSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All devices' }));
   const countLabel = el('span', { class: 'muted' });
 
-  const advancedToggle = el('button', { type: 'button', class: 'small', text: 'Advanced: show full tables' });
-  const advancedPanel = el('div', { hidden: true });
+
 
   let irdbDevices: IrdbDevice[] = [];
   let lircDevices: LircDevice[] = [];
@@ -189,40 +188,34 @@ export function initBrowseTab(
       results.append(el('p', { class: 'muted', text: 'No matching devices.' }));
       return;
     }
-    if (hits.length === 1) {
-      const entry = hits[0];
-      const row = el('div', { class: 'row' });
-      const saveBtn = el('button', { type: 'button', class: 'primary', text: 'Save to Wig' });
-      saveBtn.addEventListener('click', () => void saveEntry(entry));
-      const openBtn = el('button', { type: 'button', class: 'small', text: 'Open for editing' });
-      openBtn.addEventListener('click', () => void openEntry(entry));
-      row.append(saveBtn, openBtn);
-      results.append(
-        el('p', { text: `${entry.brand} ${entry.model} (${entry.source}, ${entry.signals} signals)` }),
-        row,
-      );
-      return;
-    }
-    const list = el('ul', { class: 'combined-results' });
-    for (const entry of hits.slice(0, 100)) {
-      const li = el('li');
-      const saveBtn = el('button', { type: 'button', class: 'small primary', text: 'Save' });
+    const shown = hits.slice(0, 500);
+    const thead = el('thead', {}, el('tr', {},
+      el('th', { text: 'Source' }),
+      el('th', { text: 'Brand' }),
+      el('th', { text: 'Device' }),
+      el('th', { text: 'Signals' }),
+      el('th', { text: '' }),
+    ));
+    const tbody = el('tbody');
+    for (const entry of shown) {
+      const tr = el('tr');
+      const saveBtn = el('button', { type: 'button', class: 'small primary', text: 'Save to Wig' });
       saveBtn.addEventListener('click', () => void saveEntry(entry));
       const openBtn = el('button', { type: 'button', class: 'small', text: 'Open' });
       openBtn.addEventListener('click', () => void openEntry(entry));
-      li.append(
-        el('span', { class: 'source-badge', text: entry.source }),
-        el('span', { text: ` ${entry.brand} ${entry.model} ` }),
-        el('span', { class: 'muted', text: `(${entry.signals} signals)` }),
-        saveBtn,
-        openBtn,
+      tr.append(
+        el('td', { text: entry.source }),
+        el('td', { class: 'brand', text: entry.brand }),
+        el('td', { text: entry.model }),
+        el('td', { text: entry.signals > 0 ? String(entry.signals) : '\u2014' }),
+        el('td', { class: 'open-cell' }, saveBtn, openBtn),
       );
-      list.append(li);
+      tbody.append(tr);
     }
-    if (hits.length > 100) {
-      results.append(el('p', { class: 'muted', text: `Showing 100 of ${hits.length}. Narrow by device.` }));
+    results.append(el('table', { class: 'result-table' }, thead, tbody));
+    if (shown.length < hits.length) {
+      results.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length}. Narrow by device.` }));
     }
-    results.append(list);
   }
 
   // --- index status (unchanged, kept below) -------------------------------
@@ -277,19 +270,13 @@ export function initBrowseTab(
     results,
   );
 
-  const advancedSection = el('fieldset', {},
-    el('legend', { text: 'Advanced' }),
-    advancedToggle,
-    advancedPanel,
-  );
-
   const databaseInfoBox = el('fieldset', {},
     el('legend', { text: 'Database information' }),
     el('h3', { class: 'match-head', text: 'IRDB' }), irdbIndexStatus, irdbIndexSkip,
     el('h3', { class: 'match-head', text: 'LIRC' }), lircIndexStatus, lircIndexSkip,
   );
 
-  section.append(browseControls, advancedSection);
+  section.append(browseControls);
 
   const databasePanel = el('div', { class: 'remote-panel' });
   databasePanel.append(databaseInfoBox);
@@ -297,11 +284,6 @@ export function initBrowseTab(
 
   brandSelect.addEventListener('change', () => { refreshModelOptions(); applySelection(); });
   modelSelect.addEventListener('change', applySelection);
-
-  advancedToggle.addEventListener('click', () => {
-    advancedPanel.hidden = !advancedPanel.hidden;
-    advancedToggle.textContent = advancedPanel.hidden ? 'Advanced: show full tables' : 'Advanced: hide';
-  });
 
   // Load both indexes, then rebuild the combined picker.
   status.textContent = 'Loading device indexes\u2026';
