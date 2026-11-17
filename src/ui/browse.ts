@@ -229,7 +229,7 @@ export function initBrowseTab(
     const reasons: HTMLElement[] = [];
     if (skipped.parseErrors) reasons.push(el('p', { class: 'muted', text: `${skipped.parseErrors} file${skipped.parseErrors === 1 ? '' : 's'} could not be parsed.` }));
     if (skipped.noSupportedRows) {
-      reasons.push(el('p', { class: 'muted', text: `${skipped.noSupportedRows} file${skipped.noSupportedRows === 1 ? '' : 's'} parsed but produced no decodable rows.` }));
+      reasons.push(el('p', { class: 'muted', text: `${skipped.noSupportedRows} file${skipped.noSupportedRows === 1 ? '' : 's'} parsed but produced no decodable rows: unsupported or raw-code/driver-based protocols (RCMM, XMP, DISH, …).` }));
     }
     if (!reasons.length) reasons.push(el('p', { class: 'muted', text: 'Nothing was skipped; every IRDB file indexed cleanly.' }));
     reasons.push(el('p', { class: 'muted', text: `That is ${misses} of the ${total} files in the repository at index time.` }));
