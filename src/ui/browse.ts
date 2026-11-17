@@ -66,13 +66,20 @@ export function initBrowseTab(
     combined = entries;
   }
 
+  function brandKey(s: string): string { return s.trim().toLowerCase(); }
+  function modelKey(s: string): string { return s.trim().toLowerCase(); }
+
   function refreshBrandOptions(): void {
     const current = brandSelect.value;
-    const brands = [...new Set(combined.map((e) => e.brand))]
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    const display = new Map<string, string>();
+    for (const e of combined) {
+      const k = brandKey(e.brand);
+      if (!display.has(k)) display.set(k, e.brand);
+    }
+    const keys = [...display.keys()].sort((a, b) => a.localeCompare(b));
     clear(brandSelect);
     brandSelect.append(el('option', { value: '', text: 'All brands' }));
-    for (const b of brands) brandSelect.append(el('option', { value: b, text: b }));
+    for (const k of keys) brandSelect.append(el('option', { value: k, text: display.get(k)! }));
     brandSelect.value = current;
   }
 
@@ -84,18 +91,23 @@ export function initBrowseTab(
       modelSelect.append(el('option', { value: '', text: 'All devices' }));
       return;
     }
-    const models = [...new Set(combined.filter((e) => e.brand === brand).map((e) => e.model))]
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    const display = new Map<string, string>();
+    for (const e of combined) {
+      if (brandKey(e.brand) !== brand) continue;
+      const k = modelKey(e.model);
+      if (!display.has(k)) display.set(k, e.model);
+    }
+    const keys = [...display.keys()].sort((a, b) => a.localeCompare(b));
     modelSelect.disabled = false;
     modelSelect.append(el('option', { value: '', text: 'All devices' }));
-    for (const m of models) modelSelect.append(el('option', { value: m, text: m }));
+    for (const k of keys) modelSelect.append(el('option', { value: k, text: display.get(k)! }));
   }
 
   function currentHits(): CombinedEntry[] {
     const brand = brandSelect.value;
     const model = modelSelect.value;
     return combined.filter((e) =>
-      (!brand || e.brand === brand) && (!model || e.model === model));
+      (!brand || brandKey(e.brand) === brand) && (!model || modelKey(e.model) === model));
   }
 
   function applySelection(): void {
