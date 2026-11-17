@@ -60,6 +60,7 @@ import { MwmProtocol } from './protocol/mwm.js';
 import { JvcProtocol } from './protocol/jvc.js';
 import { Jvc48Protocol } from './protocol/jvc48.js';
 import { PanasonicProtocol } from './protocol/panasonic.js';
+import { SonyProtocol } from './protocol/sony.js';
 import { SamsungProtocol } from './protocol/samsung.js';
 import { Samsung36Protocol } from './protocol/samsung36.js';
 import { Samsung20Protocol } from './protocol/samsung20.js';
@@ -92,6 +93,9 @@ export class Converter {
     this.registerProtocol(new JvcProtocol());
     this.registerProtocol(new Jvc48Protocol());
     this.registerProtocol(new PanasonicProtocol());
+    this.registerProtocol(new SonyProtocol('SONY20', 20));
+    this.registerProtocol(new SonyProtocol('SONY15', 15));
+    this.registerProtocol(new SonyProtocol('SONY12', 12));
     this.registerProtocol(new SamsungProtocol());
     this.registerProtocol(new Samsung36Protocol());
     this.registerProtocol(new Samsung20Protocol());
