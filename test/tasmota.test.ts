@@ -187,7 +187,7 @@ test('multi-signal console dump decodes supported lines and drops the rest', () 
   ].join('\n');
 
   const codes = converter.importFormat('Tasmota', dump);
-  assert.equal(codes.length, 2, 'dump decodes the supported signals, drops the rest');
+  assert.equal(codes.length, 3, 'dump decodes the supported signals, drops the rest');
   assert.equal(codes[0].protocol, 'NEC', 'dump first signal is structured NEC');
   assert.equal(codes[0].alias, '0x08F700FF', 'dump NEC alias comes from its decoded display-form Data');
   assert.equal(codes[1].protocol, 'JVC', 'dump second signal is raw JVC data');

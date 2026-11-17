@@ -204,7 +204,7 @@ test('skip report explains why files were left out', () => {
   const idx = buildIrdbIndex(
     sources(
       ['Sony/TV/KDL-40A100,00.csv', NEC_CSV],
-      ['Philips/TV/RC5-Telly,00.csv', 'functionname,protocol,device,subdevice,function\nKEY_POWER,RC5,0,12,1\n'],
+      ['Philips/TV/Proton-Telly,00.csv', 'functionname,protocol,device,subdevice,function\nKEY_POWER,PROTON,0,12,1\n'],
       // No known columns, so the first line becomes data with protocol "REALLY",
       // which is unregistered: the file parses but yields no codes.
       ['Broken/Broken/Device,00.csv', 'not,really,csv\n'],
@@ -215,7 +215,7 @@ test('skip report explains why files were left out', () => {
   assert.equal(idx.misses, 3);
   assert.equal(idx.skipped.parseErrors, 1, 'only the empty file fails to parse');
   assert.equal(idx.skipped.noSupportedRows, 2);
-  assert.equal(idx.skipped.singleProtocol['RC5'], 1, 'the RC5-only file is attributed to RC5');
+  assert.equal(idx.skipped.singleProtocol['PROTON'], 1, 'the PROTON-only file is attributed to PROTON');
   assert.equal(idx.skipped.singleProtocol['REALLY'], 1, 'a file with a single unregistered protocol token is attributed to it');
   assert.equal(idx.skipped.mixedProtocols, 0);
 });
@@ -223,7 +223,7 @@ test('skip report explains why files were left out', () => {
 test('skip report groups files that mix unsupported protocols', () => {
   const mixed = [
     'functionname,protocol,device,subdevice,function',
-    'KEY_POWER,RC5,0,12,1',
+    'KEY_POWER,PROTON,0,12,1',
     'KEY_VOLUP,AIWA,0,12,16',
   ].join('\n');
   const idx = buildIrdbIndex(

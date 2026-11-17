@@ -523,7 +523,7 @@ test('mixed IRDB CSV skips unregistered protocols', () => {
   const csv = [
     'functionname,protocol,device,subdevice,function',
     'KEY_POWER,NEC1,4,0,8',
-    'KEY_RC5,RC5,1,0,2',
+    'KEY_AIWA,AIWA,1,0,2',
     'KEY_ON,NECX2,25,-1,8',
     'KEY_MUTE2,NEC2,26,232,5',
     'KEY_PLAY,JVC,3,-1,12',

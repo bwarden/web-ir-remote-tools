@@ -57,6 +57,7 @@ import type { DecodeParams, ProtocolHandler } from './protocol.js';
 import { NecProtocol, Nec2Protocol, Necx1Protocol, Necx2Protocol } from './protocol/nec.js';
 import { Nec48Protocol } from './protocol/nec48.js';
 import { MwmProtocol } from './protocol/mwm.js';
+import { Rc5Protocol } from './protocol/rc5.js';
 import { JvcProtocol } from './protocol/jvc.js';
 import { Jvc48Protocol } from './protocol/jvc48.js';
 import { PanasonicProtocol } from './protocol/panasonic.js';
@@ -102,6 +103,7 @@ export class Converter {
     this.registerProtocol(new Necx1Protocol());
     this.registerProtocol(new Necx2Protocol());
     this.registerProtocol(new MwmProtocol());
+    this.registerProtocol(new Rc5Protocol());
 
     this.registerFormat('Pronto', new ProntoFormat());
     this.registerFormat('CSV', new CsvFormat());
