@@ -229,7 +229,11 @@ export function initBrowseTab(
     const reasons: HTMLElement[] = [];
     if (skipped.parseErrors) reasons.push(el('p', { class: 'muted', text: `${skipped.parseErrors} file${skipped.parseErrors === 1 ? '' : 's'} could not be parsed.` }));
     if (skipped.noSupportedRows) {
-      reasons.push(el('p', { class: 'muted', text: `${skipped.noSupportedRows} file${skipped.noSupportedRows === 1 ? '' : 's'} parsed but produced no decodable rows: unsupported or raw-code/driver-based protocols (RCMM, XMP, DISH, …).` }));
+      reasons.push(el('p', { class: 'muted', text: `${skipped.noSupportedRows} file${skipped.noSupportedRows === 1 ? '' : 's'} parsed but produced no decodable rows.` }));
+      const _attr = Object.values(skipped.singleProtocol).reduce((a, b) => a + b, 0) + skipped.mixedProtocols;
+      const _unattr = skipped.noSupportedRows - _attr;
+      if (_attr > 0) reasons.push(el('p', { class: 'muted', text: `Attributed to a single unsupported protocol: ${Object.entries(skipped.singleProtocol).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${p} (${n})`).join(', ')}${skipped.mixedProtocols ? `, plus ${skipped.mixedProtocols} mixed-protocol file${skipped.mixedProtocols===1?'':'s'}` : ''}.` }));
+      if (_unattr > 0) reasons.push(el('p', { class: 'muted', text: `${_unattr} file${_unattr===1?'':'s'} had no recognizable protocol token (raw-code or driver-based remotes such as zotac/imon).` }));
     }
     if (!reasons.length) reasons.push(el('p', { class: 'muted', text: 'Nothing was skipped; every IRDB file indexed cleanly.' }));
     reasons.push(el('p', { class: 'muted', text: `That is ${misses} of the ${total} files in the repository at index time.` }));
