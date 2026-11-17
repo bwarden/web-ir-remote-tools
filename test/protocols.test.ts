@@ -530,14 +530,25 @@ const harmonyProntos: Record<string, string> = {
   'SAMSUNG': '0000 006D 0022 0000 00AB 00AB 0017 003F 0017 003F 0017 003F 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003F 0017 003F 0017 003F 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003F 0017 0013 0017 0013 0017 0013 0017 003F 0017 0013 0017 0013 0017 0013 0017 0013 0017 003F 0017 003F 0017 003F 0017 0013 0017 003F 0017 003F 0017 003F 0017 0747',
 };
 
+const expectedAddress: Record<string, number> = {
+  'JVC': 115, 'SONY12': 1, 'SONY15': 151, 'SONY20': 26,
+  'RC5': 1, 'RC6': 4, 'NEC': 210, 'SAMSUNG': 224,
+};
+const expectedCommand: Record<string, number> = {
+  'JVC': 119, 'SONY12': 9, 'SONY15': 29, 'SONY20': 9,
+  'RC5': 0, 'RC6': 0, 'NEC': 71, 'SAMSUNG': 136,
+};
+
 for (const [name, pronto] of Object.entries(harmonyProntos)) {
   test(`Harmony pronto round-trips for ${name}`, () => {
     const code = converter.importFormat('Pronto', pronto)[0];
     assert.equal(code.protocol, name, 'decoded protocol');
+    assert.equal(code.address, expectedAddress[name], 'decoded address');
+    assert.equal(code.command, expectedCommand[name], 'decoded command');
     const exported = converter.exportCode(code, 'Pronto');
     const back = converter.importFormat('Pronto', exported)[0];
     assert.equal(back.protocol, name, 'round-trip protocol');
-    assert.equal(back.address, code.address, 'round-trip address');
-    assert.equal(back.command, code.command, 'round-trip command');
+    assert.equal(back.address, expectedAddress[name], 'round-trip address');
+    assert.equal(back.command, expectedCommand[name], 'round-trip command');
   });
 }
