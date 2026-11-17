@@ -48,12 +48,13 @@ const TARBALL_BASE = `https://codeload.github.com/${REPO}/tar.gz/`;
 const GENERATOR = 8;
 
 function parseArgs(argv) {
-  const args = { skip: false, offline: false, dir: null };
+  const args = { skip: false, offline: false, dir: null, force: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--skip') args.skip = true;
     else if (a === '--offline') args.offline = true;
     else if (a === '--dir') args.dir = argv[++i];
+    else if (a === '--force') args.force = true;
   }
   return args;
 }
@@ -144,7 +145,7 @@ async function main() {
   if (args.dir) {
     version = (await gitHead(args.dir)) ?? 'local';
   } else if (args.offline) {
-    if (builtIndexMeta() && builtIndexMeta().generator === GENERATOR) {
+    if (!args.force && builtIndexMeta() && builtIndexMeta().generator === GENERATOR) {
       process.stdout.write('Index up to date; skipping build (--offline).\n');
       return;
     }
@@ -158,7 +159,7 @@ async function main() {
   // unchanged since the last build, keep the existing index (no download, no
   // rebuild).
   const built = builtIndexMeta();
-  if (!args.dir && built && built.version === version && built.generator === GENERATOR) {
+  if (!args.force && !args.dir && built && built.version === version && built.generator === GENERATOR) {
     process.stdout.write(`Index up to date (IRDB @${version.slice(0, 7)}); skipping rebuild.\n`);
     return;
   }

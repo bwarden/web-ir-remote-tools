@@ -1,7 +1,7 @@
 .PHONY: index build test serve
 
 index:
-	npm run index
+	npm run index -- --force
 
 build:
 	npm run build
@@ -13,9 +13,9 @@ serve:
 	npm run serve
 
 rebuild-irdb:
-	node scripts/build-index.mjs
+	node scripts/build-index.mjs --force
 
 rebuild-lirc:
-	node scripts/build-lirc-index.mjs
+	node scripts/build-lirc-index.mjs --force
 
 rebuild-all: rebuild-irdb rebuild-lirc
