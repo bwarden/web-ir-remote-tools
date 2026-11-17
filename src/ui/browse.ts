@@ -257,7 +257,7 @@ export function initBrowseTab(
     const rev = idx.version.slice(0, 7);
     lircIndexStatus.textContent = `${idx.devices.length} devices indexed (LIRC @${rev}), ${idx.misses} files skipped, built ${when}`;
     clear(lircIndexSkip);
-    lircIndexSkip.append(el('summary', { text: `${idx.misses} skipped files \u2014 why` }));
+    lircIndexSkip.append(el('summary', { text: `${idx.misses} skipped files \u2014 why` }), ...irdbSkipReportText(idx.skipped as unknown as IrdbSkipReport, idx.misses, idx.devices.length + idx.misses));
   }
 
   // --- assemble -----------------------------------------------------------
