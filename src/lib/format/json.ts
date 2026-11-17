@@ -81,36 +81,44 @@ export class JsonFormat {
       throw new Error(`json failed validation:\n${reasons.join('\n')}`);
     }
 
+    // The repeat count is a device property (timing.pressMinRepeats), not a
+    // property of an individual command or its keycode; the keycode's trailing
+    // ":N" is a constant on 99.95% of keycodes and is not a repeat count.
+    const repeatCount = jsonRepeatCount(doc);
+
     const decoded: IRCode[] = [];
     for (const cmd of commands as unknown[]) {
       const command = cmd as Record<string, unknown>;
       if (typeof command.pronto !== 'string' || command.pronto.trim() === '') continue;
       const code = converter.importFormat('Pronto', command.pronto)[0];
       code.alias = command.name as string;
-      code.sendCount = jsonRepeatCount(command);
+      code.sendCount = repeatCount;
       decoded.push(code);
     }
     return decoded;
   }
 }
 
-// The repeat count of a JSON command: how many times the whole code replays
-// upon transmission. A raw IR database export records it two ways — a
-// per-command "repeats" integer in some exports, and always as the trailing
-// ":N" segment of the keycode (e.g. "G:Eufy 40 Bit:()(0x68A0000008)():3").
+// The repeat count of a JSON document: how many times the whole code replays
+// upon transmission. In the IR database this is the device's
+// timing.pressMinRepeats (the Harmony hub reads it, defaulting to 3). It is
+// a property of the device, not of an individual command or its keycode.
 // 0 means no count was recorded, which the wig exporter reads as the default
 // single press.
-function jsonRepeatCount(command: Record<string, unknown>): number {
-  const r = command.repeats;
-  if (typeof r === 'number' && Number.isInteger(r) && r >= 1) return r;
-  if (typeof r === 'string' && /^\d+$/.test(r)) {
-    const fromField = Number.parseInt(r, 10);
-    if (fromField >= 1) return fromField;
+function jsonRepeatCount(doc: Record<string, unknown>): number {
+  const timing = doc.timing;
+  if (timing && typeof timing === 'object' && !Array.isArray(timing)) {
+    const t = timing as Record<string, unknown>;
+    const pmr = t.pressMinRepeats;
+    if (typeof pmr === 'number' && Number.isInteger(pmr) && pmr >= 0) return pmr;
+    if (typeof pmr === 'string' && /^\d+$/.test(pmr)) return Number.parseInt(pmr, 10);
+    return 3; // Harmony hub default when the field is absent
   }
-  const keycodeTail = typeof command.keycode === 'string' && /:(\d{1,3})$/.exec(command.keycode);
-  if (keycodeTail) {
-    const fromKeycode = Number.parseInt(keycodeTail[1], 10);
-    if (fromKeycode >= 1) return fromKeycode;
+  if (typeof doc.pressMinRepeats === 'number' && Number.isInteger(doc.pressMinRepeats) && doc.pressMinRepeats >= 0) {
+    return doc.pressMinRepeats;
+  }
+  if (typeof doc.pressMinRepeats === 'string' && /^\d+$/.test(doc.pressMinRepeats)) {
+    return Number.parseInt(doc.pressMinRepeats, 10);
   }
   return 0;
 }
