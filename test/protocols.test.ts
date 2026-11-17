@@ -7,6 +7,7 @@ import { JvcProtocol } from '../src/lib/protocol/jvc.js';
 import { SamsungProtocol } from '../src/lib/protocol/samsung.js';
 import { Samsung36Protocol } from '../src/lib/protocol/samsung36.js';
 import { PanasonicProtocol } from '../src/lib/protocol/panasonic.js';
+import { Rc6Protocol } from '../src/lib/protocol/rc6.js';
 
 const converter = new Converter();
 
@@ -505,4 +506,15 @@ test('SAMSUNG20 decode_params, default subdevice, and roundtrip', () => {
   assert.equal(back.address, 1);
   assert.equal(back.subaddress, 8);
   assert.equal(back.command, 39);
+});
+
+
+test('RC6 round-trips a synthetic frame', () => {
+  const proto = new Rc6Protocol();
+  const code = proto.decodeParams({ address: 5, command: 10 });
+  const pronto = converter.exportCode(code, 'Pronto');
+  const back = converter.importFormat('Pronto', pronto)[0];
+  assert.equal(back.protocol, 'RC6');
+  assert.equal(back.address, 5);
+  assert.equal(back.command, 10);
 });
