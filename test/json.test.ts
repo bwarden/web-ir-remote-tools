@@ -161,17 +161,16 @@ test('a JSON commands list is never emitted in a wig export', () => {
   assert.equal(wig.format, 'hair-wig/3', 'still a valid wig');
 });
 
-test('JSON repeats survive into a wig send_count', () => {
-  // A real dump records the repeat count as the trailing ":N" of the
-  // keycode; some exports also carry an explicit per-command "repeats" field,
-  // which wins when present. Both must land on the wig's send_count and ride
-  // a wig -> wig round trip.
-  const fieldRepeats = JSON.stringify({
+test('JSON repeats come from device timing.pressMinRepeats', () => {
+  // The repeat count is a device property (timing.pressMinRepeats), not a
+  // property of an individual command or its keycode; it rides send_count on
+  // every command in the document and survives a wig round trip.
+  const doc = JSON.stringify({
+    timing: { pressMinRepeats: 2 },
     commands: [
       {
         keycode: 'G:Sony12:()(0xC0)():4',
         name: 'FieldWins',
-        repeats: 2,
         pronto: '0000 006D 0022 0000 0156 00AB 0017 003D 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 0663',
         protocol: 'Sony12',
       },
@@ -181,6 +180,28 @@ test('JSON repeats survive into a wig send_count', () => {
         pronto: '0000 006D 0022 0000 0156 00AB 0017 003D 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 0013 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 003D 0017 0663',
         protocol: 'Sony12',
       },
+    ],
+  });
+
+  const codes = converter.importFormat('JSON', doc);
+  const byAlias = new Map(codes.map((c) => [c.alias, c.sendCount]));
+  assert.equal(byAlias.get('FieldWins'), 2, 'device timing sets send_count');
+  assert.equal(byAlias.get('FromKeycode'), 2, 'device timing applies to every command');
+
+  const wig = JSON.parse(converter.exportCodes('wig', codes)) as {
+    signals: Array<{ alias: string; send_count?: number }>;
+  };
+  const signalByAlias = new Map(wig.signals.map((s) => [s.alias, s.send_count]));
+  assert.equal(signalByAlias.get('FieldWins'), 2, 'wig carries the device repeat count');
+  assert.equal(signalByAlias.get('FromKeycode'), 2, 'wig carries it for every signal');
+
+  const reimport = converter.importFormat('wig', JSON.stringify(wig));
+  assert.equal(reimport.find((c) => c.alias === 'FieldWins')?.sendCount, 2, 'wig -> code keeps send_count');
+
+  // A document with no device timing keeps the single-press default, which
+  // the wig exporter leaves out.
+  const noTiming = JSON.stringify({
+    commands: [
       {
         keycode: 'G:Sony12:()(0xC2)()',
         name: 'NoRepeat',
@@ -189,22 +210,10 @@ test('JSON repeats survive into a wig send_count', () => {
       },
     ],
   });
-
-  const codes = converter.importFormat('JSON', fieldRepeats);
-  const byAlias = new Map(codes.map((c) => [c.alias, c.sendCount]));
-  assert.equal(byAlias.get('FieldWins'), 2, 'the repeats field wins over the keycode suffix');
-  assert.equal(byAlias.get('FromKeycode'), 3, 'a bare keycode ":N" suffix supplies the repeat');
-  assert.equal(byAlias.get('NoRepeat')!, 0, 'no repeat recorded stays the single-press default');
-
-  const wig = JSON.parse(converter.exportCodes('wig', codes)) as {
+  const noRepeatCodes = converter.importFormat('JSON', noTiming);
+  assert.equal(noRepeatCodes[0].sendCount, 0, 'no device timing means single-press default');
+  const noRepeatWig = JSON.parse(converter.exportCodes('wig', noRepeatCodes)) as {
     signals: Array<{ alias: string; send_count?: number }>;
   };
-  const signalByAlias = new Map(wig.signals.map((s) => [s.alias, s.send_count]));
-  assert.equal(signalByAlias.get('FieldWins'), 2, 'wig carries a non-default send_count');
-  assert.equal(signalByAlias.get('FromKeycode'), 3, 'keycode-sourced repeat carries too');
-  assert.ok(!('send_count' in wig.signals.find((s) => s.alias === 'NoRepeat')!), 'default single press is not written');
-
-  const reimport = converter.importFormat('wig', JSON.stringify(wig));
-  assert.equal(reimport.find((c) => c.alias === 'FieldWins')?.sendCount, 2, 'wig -> code keeps send_count');
-  assert.equal(reimport.find((c) => c.alias === 'FromKeycode')?.sendCount, 3, 'keycode repeat round-trips');
+  assert.ok(!('send_count' in noRepeatWig.signals[0]), 'default single press is not written');
 });
