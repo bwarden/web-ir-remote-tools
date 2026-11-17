@@ -537,5 +537,7 @@ for (const [name, pronto] of Object.entries(harmonyProntos)) {
     const exported = converter.exportCode(code, 'Pronto');
     const back = converter.importFormat('Pronto', exported)[0];
     assert.equal(back.protocol, name, 'round-trip protocol');
+    assert.equal(back.address, code.address, 'round-trip address');
+    assert.equal(back.command, code.command, 'round-trip command');
   });
 }
