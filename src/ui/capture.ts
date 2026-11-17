@@ -485,39 +485,52 @@ export function initCaptureTab(
       return;
     }
 
-    // Render IRDB matches
+    const wrap = el('fieldset', {}, el('legend', { text: 'Find this remote' }));
     const irdbMatches = matches.map((m) => ({ code: m.code, exact: m.irdbExact, loose: m.irdbLoose }));
+    const lircMatches = matches.map((m) => ({ code: m.code, exact: m.lircExact, loose: m.lircLoose }));
     const irdbTotal = irdbMatches.reduce((s, m) => s + m.exact.length + m.loose.length, 0);
-    if (irdbTotal > 0 || irdbIdx) {
-      const wrap = el('fieldset', {}, el('legend', { text: 'Find this remote in IRDB' }));
-      if (irdbTotal > 0) {
-        if (session.length === 1) {
-          renderIrdbSingle(wrap, irdbMatches[0], irdbIdx!);
-        } else {
-          renderIrdbIntersection(wrap, irdbMatches, irdbIdx!);
-        }
+    const lircTotal = lircMatches.reduce((s, m) => s + m.exact.length + m.loose.length, 0);
+
+    if (session.length === 1) {
+      // Combine both databases and present a single list grouped by match
+      // quality (exact first, then loose), each entry tagged with its source.
+      const m = matches[0];
+      const exactCombined: { source: 'IRDB' | 'LIRC'; entry: IndexEntry }[] = [
+        ...m.irdbExact.map((e) => ({ source: 'IRDB' as const, entry: e })),
+        ...m.lircExact.map((e) => ({ source: 'LIRC' as const, entry: e })),
+      ];
+      const looseCombined: { source: 'IRDB' | 'LIRC'; entry: IndexEntry }[] = [
+        ...m.irdbLoose.map((e) => ({ source: 'IRDB' as const, entry: e })),
+        ...m.lircLoose.map((e) => ({ source: 'LIRC' as const, entry: e })),
+      ];
+      if (irdbIdx) renderOverlapWarnings(wrap, [m.code], irdbIdx);
+      if (!exactCombined.length && !looseCombined.length) {
+        wrap.append(el('p', { class: 'muted', text: 'No device in either database matches this code.' }));
       } else {
+        if (exactCombined.length) {
+          wrap.append(el('h3', { class: 'match-head', text: `Exact matches (${exactCombined.length})` }));
+          wrap.append(renderCombinedMatches(exactCombined, irdbIdx, lircIdx));
+        }
+        if (looseCombined.length) {
+          wrap.append(el('h3', { class: 'match-head', text: `Possible matches \u2014 subaddress differs (${looseCombined.length})` }));
+          wrap.append(renderCombinedMatches(looseCombined, irdbIdx, lircIdx));
+        }
+      }
+    } else {
+      if (irdbTotal > 0) {
+        wrap.append(el('h3', { class: 'match-head', text: 'IRDB' }));
+        renderIrdbIntersection(wrap, irdbMatches, irdbIdx!);
+      } else if (irdbIdx) {
         wrap.append(el('p', { class: 'muted', text: 'No IRDB device matches these codes.' }));
       }
-      matchBox.append(wrap);
-    }
-
-    // Render LIRC matches
-    const lircMatches = matches.map((m) => ({ code: m.code, exact: m.lircExact, loose: m.lircLoose }));
-    const lircTotal = lircMatches.reduce((s, m) => s + m.exact.length + m.loose.length, 0);
-    if (lircTotal > 0 || lircIdx) {
-      const wrap = el('fieldset', {}, el('legend', { text: 'Find this remote in LIRC' }));
       if (lircTotal > 0) {
-        if (session.length === 1) {
-          renderLircSingle(wrap, lircMatches[0], lircIdx!);
-        } else {
-          renderLircIntersection(wrap, lircMatches, lircIdx!);
-        }
-      } else {
+        wrap.append(el('h3', { class: 'match-head', text: 'LIRC' }));
+        renderLircIntersection(wrap, lircMatches, lircIdx!);
+      } else if (lircIdx) {
         wrap.append(el('p', { class: 'muted', text: 'No LIRC remote matches these codes.' }));
       }
-      matchBox.append(wrap);
     }
+    matchBox.append(wrap);
   }
 
   // Some individual codes are so common (e.g. NEC address 0, function 9 is
@@ -778,6 +791,54 @@ export function initCaptureTab(
           el('div', { class: 'match-title', text: title }),
           el('div', { class: 'match-sub', text: sub }),
           loadBtn,
+        ),
+      );
+    }
+    return ul;
+  }
+
+
+  function renderCombinedMatches(entries: { source: 'IRDB' | 'LIRC'; entry: IndexEntry }[], irdbIdx: IrdbIndex | undefined, lircIdx: LircIndex | undefined): HTMLElement {
+    const ul = el('ul', { class: 'match-list' });
+    const irdbByPath = new Map((irdbIdx?.devices ?? []).map((d) => [d.path, d]));
+    const lircByPath = new Map((lircIdx?.devices ?? []).map((d) => [d.path, d]));
+    for (const { source, entry } of entries) {
+      let title = entry.path;
+      let sub = `Button "${entry.alias}"`;
+      if (source === 'IRDB') {
+        const dev = irdbByPath.get(entry.path);
+        if (dev) { title = `${dev.brand} ${dev.model}`; sub = `Subaddress ${dev.subaddress} \u2014 button "${entry.alias}"`; }
+      } else {
+        const dev = lircByPath.get(entry.path);
+        if (dev) { title = `${dev.brand} ${dev.remote}`; sub = `Model ${dev.model} \u2014 button "${entry.alias}"`; }
+      }
+      const openBtn = el('button', { type: 'button', class: 'primary', text: 'Open remote' });
+      openBtn.addEventListener('click', async () => {
+        try {
+          openBtn.disabled = true;
+          openBtn.textContent = 'Loading\u2026';
+          if (source === 'IRDB') {
+            await remote.loadDevice(entry.path);
+          } else {
+            const { fetchLircDevice } = await import('./store.js');
+            const text = await fetchLircDevice(entry.path);
+            const { Converter: Conv } = await import('../lib/converter.js');
+            const conv = new Conv();
+            const codes = conv.importFormat('LIRC', text);
+            await remote.loadFromCodes(codes, title);
+          }
+        } catch (e) {
+          showError(`Could not load ${entry.path}: ${(e as Error).message}`);
+        } finally {
+          openBtn.disabled = false;
+          openBtn.textContent = 'Open remote';
+        }
+      });
+      ul.append(
+        el('li', {},
+          el('div', { class: 'match-title', text: `[${source}] ${title}` }),
+          el('div', { class: 'match-sub', text: sub }),
+          openBtn,
         ),
       );
     }
