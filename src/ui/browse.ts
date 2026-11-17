@@ -1,6 +1,8 @@
-// Browse IRDB and LIRC: pick a brand and a device from either database index
-// and open a device as an editable remote. Also reports the status of the
-// capture-match indexes in a block that floats below the remote editor.
+// Browse IRDB and LIRC through a single combined picker: one Brand dropdown
+// and one Device dropdown driven by both indexes concatenated (each entry
+// tagged with its source), with a single Save to Wig action. The detailed
+// per-database tables and capture-match index reports live behind the
+// Advanced toggle / database-information block below.
 
 import { Converter } from '../lib/converter.js';
 import {
@@ -19,6 +21,16 @@ import {
 import { RemoteController, confirmHardwareWarning, type RemoteDoc } from './remote.js';
 import { el, clear } from './util.js';
 
+interface CombinedEntry {
+  source: 'IRDB' | 'LIRC';
+  brand: string;
+  model: string;
+  path: string;
+  signals: number;
+  irdb?: IrdbDevice;
+  lirc?: LircDevice;
+}
+
 export function initBrowseTab(
   section: HTMLElement,
   converter: Converter,
@@ -27,20 +39,36 @@ export function initBrowseTab(
 ): void {
   clear(section);
 
-  // --- IRDB browse ----------------------------------------------------------
-
-  const irdbStatus = el('div', { class: 'status' });
-  const irdbResults = el('div');
+  const status = el('div', { class: 'status' });
+  const results = el('div');
 
   const brandSelect = el('select', {}, el('option', { value: '', text: 'All brands' }));
   const modelSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All devices' }));
-  const irdbCountLabel = el('span', { class: 'muted' });
+  const countLabel = el('span', { class: 'muted' });
+
+  const advancedToggle = el('button', { type: 'button', class: 'small', text: 'Advanced: show full tables' });
+  const advancedPanel = el('div', { hidden: true });
 
   let irdbDevices: IrdbDevice[] = [];
+  let lircDevices: LircDevice[] = [];
+  let combined: CombinedEntry[] = [];
+
+  function rebuildCombined(): void {
+    const entries: CombinedEntry[] = [];
+    for (const d of irdbDevices) {
+      entries.push({ source: 'IRDB', brand: d.brand, model: d.model, path: d.path, signals: d.signals, irdb: d });
+    }
+    for (const d of lircDevices) {
+      const brand = d.brand || d.manufacturer;
+      const model = d.model || d.remote;
+      entries.push({ source: 'LIRC', brand, model, path: d.path, signals: d.signals, lirc: d });
+    }
+    combined = entries;
+  }
 
   function refreshBrandOptions(): void {
     const current = brandSelect.value;
-    const brands = [...new Set(irdbDevices.map((d) => d.brand))]
+    const brands = [...new Set(combined.map((e) => e.brand))]
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     clear(brandSelect);
     brandSelect.append(el('option', { value: '', text: 'All brands' }));
@@ -56,80 +84,31 @@ export function initBrowseTab(
       modelSelect.append(el('option', { value: '', text: 'All devices' }));
       return;
     }
-    const models = [...new Set(irdbDevices.filter((d) => d.brand === brand).map((d) => d.model))]
+    const models = [...new Set(combined.filter((e) => e.brand === brand).map((e) => e.model))]
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     modelSelect.disabled = false;
     modelSelect.append(el('option', { value: '', text: 'All devices' }));
     for (const m of models) modelSelect.append(el('option', { value: m, text: m }));
   }
 
-  function applyIrdbSelection(): void {
+  function currentHits(): CombinedEntry[] {
+    const brand = brandSelect.value;
+    const model = modelSelect.value;
+    return combined.filter((e) =>
+      (!brand || e.brand === brand) && (!model || e.model === model));
+  }
+
+  function applySelection(): void {
     const brand = brandSelect.value;
     const model = modelSelect.value;
     if (!brand && !model) {
-      irdbCountLabel.textContent = `${irdbDevices.length} devices in the index`;
-      showIrdbIdle();
+      countLabel.textContent = `${combined.length} devices across both databases`;
+      clear(results);
       return;
     }
-    const hits = irdbDevices.filter((dev) =>
-      (!brand || dev.brand === brand) && (!model || dev.model === model));
-    irdbCountLabel.textContent = `${hits.length} device${hits.length === 1 ? '' : 's'}`;
-    renderIrdbResults(hits);
-  }
-
-  function showIrdbIdle(): void {
-    clear(irdbResults);
-    irdbResults.append(
-    );
-  }
-
-  function renderIrdbResults(hits: IrdbDevice[]): void {
-    clear(irdbResults);
-    const shown = hits.slice(0, 500);
-    irdbResults.append(
-      el('p', { class: 'fetch-note', text: 'These devices are not bundled with the app. Each row fetches its signals live from the IRDB CDN when you open it.' }),
-    );
-    if (shown.length < hits.length) {
-      irdbResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a brand and device to narrow the list.` }));
-    }
-    if (!shown.length) {
-      irdbResults.append(el('p', { class: 'muted', text: 'No matching devices.' }));
-      return;
-    }
-
-    const thead = el('thead', {}, el('tr', {},
-      el('th', { text: 'Brand' }),
-      el('th', { text: 'Device' }),
-      el('th', { text: 'Address' }),
-      el('th', { text: 'Subaddress' }),
-      el('th', { text: 'Signals' }),
-      el('th', { text: '' }),
-    ));
-    const tbody = el('tbody');
-    for (const dev of shown) {
-      const tr = el('tr', { 'data-path': dev.path });
-      const openBtn = el('button', { type: 'button', class: 'small primary', text: 'Fetch and open from IRDB' });
-      openBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        void openIrdbDevice(dev);
-      });
-      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download wig' });
-      downloadBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        void downloadIrdbDevice(dev);
-      });
-      tr.append(
-        el('td', { class: 'brand', text: dev.brand }),
-        el('td', { text: dev.model }),
-        el('td', { text: dev.address }),
-        el('td', { text: dev.subaddress }),
-        el('td', { text: dev.signals > 0 ? String(dev.signals) : '\u2014' }),
-        el('td', { class: 'open-cell' }, openBtn, downloadBtn),
-      );
-      tr.addEventListener('click', () => openIrdbDevice(dev));
-      tbody.append(tr);
-    }
-    irdbResults.append(el('table', { class: 'result-table' }, thead, tbody));
+    const hits = currentHits();
+    countLabel.textContent = `${hits.length} match${hits.length === 1 ? '' : 'es'}`;
+    renderResults(hits);
   }
 
   async function buildIrdbDoc(dev: IrdbDevice): Promise<RemoteDoc> {
@@ -149,323 +128,191 @@ export function initBrowseTab(
     };
   }
 
-  async function openIrdbDevice(dev: IrdbDevice): Promise<void> {
-    try {
-      irdbStatus.className = 'status';
-      irdbStatus.textContent = `Loading ${dev.brand} ${dev.model}\u2026`;
-      await remote.load(await buildIrdbDoc(dev));
-      irdbStatus.textContent = '';
-    } catch (e) {
-      irdbStatus.className = 'status error';
-      irdbStatus.textContent = `Could not load ${dev.path}: ${(e as Error).message}`;
-    }
-  }
-
-  async function downloadIrdbDevice(dev: IrdbDevice): Promise<void> {
-    if (!confirmHardwareWarning()) return;
-    try {
-      irdbStatus.className = 'status';
-      irdbStatus.textContent = `Preparing ${dev.brand} ${dev.model}\u2026`;
-      remote.downloadWigFor(await buildIrdbDoc(dev));
-      irdbStatus.textContent = '';
-    } catch (e) {
-      irdbStatus.className = 'status error';
-      irdbStatus.textContent = `Could not download ${dev.path}: ${(e as Error).message}`;
-    }
-  }
-
-  irdbStatus.textContent = 'Loading the IRDB device index\u2026';
-  fetchDeviceList()
-    .then((list) => {
-      irdbDevices = list.devices;
-      irdbStatus.textContent = '';
-      refreshBrandOptions();
-      refreshModelOptions();
-      applyIrdbSelection();
-    })
-    .catch((e) => {
-      irdbStatus.className = 'status error';
-      irdbStatus.textContent = `Could not load the IRDB index: ${(e as Error).message}`;
-    });
-
-  // --- LIRC browse ----------------------------------------------------------
-
-  const lircStatus = el('div', { class: 'status' });
-  const lircResults = el('div');
-
-  const mfgSelect = el('select', {}, el('option', { value: '', text: 'All brands' }));
-  const remoteSelect = el('select', { disabled: true }, el('option', { value: '', text: 'All devices' }));
-  const lircCountLabel = el('span', { class: 'muted' });
-
-  let lircDevices: LircDevice[] = [];
-
-  function refreshMfgOptions(): void {
-    const current = mfgSelect.value;
-    const mfgs = [...new Set(lircDevices.map((d) => d.manufacturer))]
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-    clear(mfgSelect);
-    mfgSelect.append(el('option', { value: '', text: 'All brands' }));
-    for (const m of mfgs) mfgSelect.append(el('option', { value: m, text: m }));
-    mfgSelect.value = current;
-  }
-
-  function refreshRemoteOptions(): void {
-    const mfg = mfgSelect.value;
-    clear(remoteSelect);
-    if (!mfg) {
-      remoteSelect.disabled = true;
-      remoteSelect.append(el('option', { value: '', text: 'All devices' }));
-      return;
-    }
-    const remotes = [...new Set(lircDevices.filter((d) => d.manufacturer === mfg).map((d) => d.remote))]
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-    remoteSelect.disabled = false;
-    remoteSelect.append(el('option', { value: '', text: 'All devices' }));
-    for (const r of remotes) remoteSelect.append(el('option', { value: r, text: r }));
-  }
-
-  function applyLircSelection(): void {
-    const mfg = mfgSelect.value;
-    const remote = remoteSelect.value;
-    if (!mfg && !remote) {
-      lircCountLabel.textContent = `${lircDevices.length} devices in the index`;
-      showLircIdle();
-      return;
-    }
-    const hits = lircDevices.filter((dev) =>
-      (!mfg || dev.manufacturer === mfg) && (!remote || dev.remote === remote));
-    lircCountLabel.textContent = `${hits.length} device${hits.length === 1 ? '' : 's'}`;
-    renderLircResults(hits);
-  }
-
-  function showLircIdle(): void {
-    clear(lircResults);
-    lircResults.append(
-    );
-  }
-
-  function renderLircResults(hits: LircDevice[]): void {
-    clear(lircResults);
-    const shown = hits.slice(0, 500);
-    lircResults.append(
-      el('p', { class: 'fetch-note', text: 'These devices are fetched on demand from the lirc-remotes repository.' }),
-    );
-    if (shown.length < hits.length) {
-      lircResults.append(el('p', { class: 'muted', text: `Showing ${shown.length} of ${hits.length} devices. Pick a brand to narrow the list.` }));
-    }
-    if (!shown.length) {
-      lircResults.append(el('p', { class: 'muted', text: 'No matching devices.' }));
-      return;
-    }
-
-    const thead = el('thead', {}, el('tr', {},
-      el('th', { text: 'Brand' }),
-      el('th', { text: 'Device' }),
-      el('th', { text: 'Signals' }),
-      el('th', { text: '' }),
-    ));
-    const tbody = el('tbody');
-    for (const dev of shown) {
-      const tr = el('tr', { 'data-path': dev.path });
-      const openBtn = el('button', { type: 'button', class: 'small primary', text: 'Fetch and open from LIRC' });
-      openBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        void openLircDevice(dev);
-      });
-      const downloadBtn = el('button', { type: 'button', class: 'small', text: 'Download wig' });
-      downloadBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        void downloadLircDevice(dev);
-      });
-      tr.append(
-        el('td', { class: 'brand', text: dev.brand }),
-        el('td', { text: dev.remote }),
-        el('td', { text: dev.signals > 0 ? String(dev.signals) : '\u2014' }),
-        el('td', { class: 'open-cell' }, openBtn, downloadBtn),
-      );
-      tr.addEventListener('click', () => openLircDevice(dev));
-      tbody.append(tr);
-    }
-    lircResults.append(el('table', { class: 'result-table' }, thead, tbody));
-  }
-
   async function buildLircDoc(dev: LircDevice): Promise<RemoteDoc> {
     const text = await fetchLircDevice(dev.path);
     const codes = converter.importFormat('LIRC', text);
     if (!codes.length) throw new Error('No supported signals in this device');
     return {
-      meta: { name: dev.remote, brand: dev.brand, model: dev.remote, kind: '' },
+      meta: { name: dev.remote, brand: dev.brand || dev.manufacturer, model: dev.remote, kind: '' },
       signals: codes,
     };
   }
 
-  async function openLircDevice(dev: LircDevice): Promise<void> {
-    try {
-      lircStatus.className = 'status';
-      lircStatus.textContent = `Loading ${dev.brand} ${dev.remote}\u2026`;
-      await remote.load(await buildLircDoc(dev));
-      lircStatus.textContent = '';
-    } catch (e) {
-      lircStatus.className = 'status error';
-      lircStatus.textContent = `Could not load ${dev.path}: ${(e as Error).message}`;
-    }
-  }
-
-  async function downloadLircDevice(dev: LircDevice): Promise<void> {
+  async function saveEntry(entry: CombinedEntry): Promise<void> {
     if (!confirmHardwareWarning()) return;
     try {
-      lircStatus.className = 'status';
-      lircStatus.textContent = `Preparing ${dev.brand} ${dev.remote}\u2026`;
-      remote.downloadWigFor(await buildLircDoc(dev));
-      lircStatus.textContent = '';
+      status.className = 'status';
+      status.textContent = `Preparing ${entry.brand} ${entry.model}\u2026`;
+      if (entry.irdb) {
+        await remote.downloadWigFor(await buildIrdbDoc(entry.irdb));
+      } else if (entry.lirc) {
+        await remote.downloadWigFor(await buildLircDoc(entry.lirc));
+      }
+      status.textContent = '';
     } catch (e) {
-      lircStatus.className = 'status error';
-      lircStatus.textContent = `Could not download ${dev.path}: ${(e as Error).message}`;
+      status.className = 'status error';
+      status.textContent = `Could not download: ${(e as Error).message}`;
     }
   }
 
-  lircStatus.textContent = 'Loading the LIRC device index\u2026';
-  fetchLircDeviceList()
-    .then((list) => {
-      lircDevices = list.devices;
-      lircStatus.textContent = '';
-      refreshMfgOptions();
-      refreshRemoteOptions();
-      applyLircSelection();
-    })
-    .catch((e) => {
-      lircStatus.className = 'status';
-      lircStatus.textContent = `LIRC index not available: ${(e as Error).message}`;
-    });
+  async function openEntry(entry: CombinedEntry): Promise<void> {
+    try {
+      status.className = 'status';
+      status.textContent = `Loading ${entry.brand} ${entry.model}\u2026`;
+      if (entry.irdb) {
+        await remote.load(await buildIrdbDoc(entry.irdb));
+      } else if (entry.lirc) {
+        await remote.load(await buildLircDoc(entry.lirc));
+      }
+      status.textContent = '';
+    } catch (e) {
+      status.className = 'status error';
+      status.textContent = `Could not load: ${(e as Error).message}`;
+    }
+  }
 
-  // --- index status ---------------------------------------------------------
+  function renderResults(hits: CombinedEntry[]): void {
+    clear(results);
+    if (!hits.length) {
+      results.append(el('p', { class: 'muted', text: 'No matching devices.' }));
+      return;
+    }
+    if (hits.length === 1) {
+      const entry = hits[0];
+      const row = el('div', { class: 'row' });
+      const saveBtn = el('button', { type: 'button', class: 'primary', text: 'Save to Wig' });
+      saveBtn.addEventListener('click', () => void saveEntry(entry));
+      const openBtn = el('button', { type: 'button', class: 'small', text: 'Open for editing' });
+      openBtn.addEventListener('click', () => void openEntry(entry));
+      row.append(saveBtn, openBtn);
+      results.append(
+        el('p', { text: `${entry.brand} ${entry.model} (${entry.source}, ${entry.signals} signals)` }),
+        row,
+      );
+      return;
+    }
+    const list = el('ul', { class: 'combined-results' });
+    for (const entry of hits.slice(0, 100)) {
+      const li = el('li');
+      const saveBtn = el('button', { type: 'button', class: 'small primary', text: 'Save' });
+      saveBtn.addEventListener('click', () => void saveEntry(entry));
+      const openBtn = el('button', { type: 'button', class: 'small', text: 'Open' });
+      openBtn.addEventListener('click', () => void openEntry(entry));
+      li.append(
+        el('span', { class: 'source-badge', text: entry.source }),
+        el('span', { text: ` ${entry.brand} ${entry.model} ` }),
+        el('span', { class: 'muted', text: `(${entry.signals} signals)` }),
+        saveBtn,
+        openBtn,
+      );
+      list.append(li);
+    }
+    if (hits.length > 100) {
+      results.append(el('p', { class: 'muted', text: `Showing 100 of ${hits.length}. Narrow by device.` }));
+    }
+    results.append(list);
+  }
+
+  // --- index status (unchanged, kept below) -------------------------------
 
   const irdbIndexStatus = el('span', { class: 'progress-label' });
   const irdbIndexSkip = el('details', { class: 'skip-report' });
+  const lircIndexStatus = el('span', { class: 'progress-label' });
+  const lircIndexSkip = el('details', { class: 'skip-report' });
 
   function irdbSkipReportText(skipped: IrdbSkipReport, misses: number, total: number): HTMLElement[] {
     const reasons: HTMLElement[] = [];
-    if (skipped.parseErrors) {
-      reasons.push(el('p', { class: 'muted', text: `${skipped.parseErrors} file${skipped.parseErrors === 1 ? '' : 's'} could not be parsed.` }));
-    }
+    if (skipped.parseErrors) reasons.push(el('p', { class: 'muted', text: `${skipped.parseErrors} file${skipped.parseErrors === 1 ? '' : 's'} could not be parsed.` }));
     if (skipped.noSupportedRows) {
-      reasons.push(el('p', {
-        class: 'muted',
-        text: `${skipped.noSupportedRows} file${skipped.noSupportedRows === 1 ? '' : 's'} parsed but produced no decodable rows: every row used a protocol this build does not support. Only the NEC family (incl. 48-NEC), JVC (incl. JVC-48), Samsung, SAMSUNG20, and SAMSUNG36 are indexed; IRDB spans dozens of other protocols (RC5, Sony, Panasonic, DISH, \u2026).`,
-      }));
-      const protocols = Object.entries(skipped.singleProtocol).sort((a, b) => b[1] - a[1]);
-      if (protocols.length) {
-        const shown = protocols.slice(0, 8).map(([p, n]) => `${p} (${n} files)`).join(', ');
-        const rest = protocols.length - 8;
-        reasons.push(el('p', {
-          class: 'muted',
-          text: `Most common unsupported protocols: ${shown}${rest > 0 ? `, and ${rest} more` : ''}.`,
-        }));
-      }
-      if (skipped.mixedProtocols) {
-        reasons.push(el('p', { class: 'muted', text: `${skipped.mixedProtocols} file${skipped.mixedProtocols === 1 ? '' : 's'} mixed several unsupported protocols.` }));
-      }
+      reasons.push(el('p', { class: 'muted', text: `${skipped.noSupportedRows} file${skipped.noSupportedRows === 1 ? '' : 's'} parsed but produced no decodable rows.` }));
     }
-    if (!reasons.length) {
-      reasons.push(el('p', { class: 'muted', text: 'Nothing was skipped; every IRDB file indexed cleanly.' }));
-    }
-    reasons.push(el('p', { class: 'muted', text: `That is ${misses} of the ${total} files in the repository at index time \u2014 the missing device types are simply not covered by this build's protocol set.` }));
+    if (!reasons.length) reasons.push(el('p', { class: 'muted', text: 'Nothing was skipped; every IRDB file indexed cleanly.' }));
+    reasons.push(el('p', { class: 'muted', text: `That is ${misses} of the ${total} files in the repository at index time.` }));
     return reasons;
   }
 
   async function refreshIrdbIndexStatus(): Promise<void> {
     const idx = await loadIrdbIndex();
-    if (!idx) {
-      irdbIndexStatus.textContent = 'Search index unavailable.';
-      return;
-    }
+    if (!idx) { irdbIndexStatus.textContent = 'Search index unavailable.'; return; }
     const when = new Date(idx.builtAt).toLocaleString();
     const rev = idx.version.slice(0, 7);
-    const commitAge = idx.commitDate ? ` (committed ${new Date(idx.commitDate).toLocaleDateString()})` : '';
-    irdbIndexStatus.textContent =
-      `${idx.devices.length} devices indexed (IRDB @${rev}${commitAge}), ${idx.misses} files skipped, built ${when}`;
+    irdbIndexStatus.textContent = `${idx.devices.length} devices indexed (IRDB @${rev}), ${idx.misses} files skipped, built ${when}`;
     clear(irdbIndexSkip);
-    irdbIndexSkip.append(
-      el('summary', { text: `${idx.misses} skipped files \u2014 why` }),
-      ...irdbSkipReportText(idx.skipped, idx.misses, idx.devices.length + idx.misses),
-    );
+    irdbIndexSkip.append(el('summary', { text: `${idx.misses} skipped files \u2014 why` }), ...irdbSkipReportText(idx.skipped, idx.misses, idx.devices.length + idx.misses));
   }
-
-  const lircIndexStatus = el('span', { class: 'progress-label' });
-  const lircIndexSkip = el('details', { class: 'skip-report' });
 
   async function refreshLircIndexStatus(): Promise<void> {
     const idx = await loadLircIndex();
-    if (!idx) {
-      lircIndexStatus.textContent = 'LIRC index not available.';
-      return;
-    }
+    if (!idx) { lircIndexStatus.textContent = 'LIRC index not available.'; return; }
     const when = new Date(idx.builtAt).toLocaleString();
     const rev = idx.version.slice(0, 7);
-    const commitAge = idx.commitDate ? ` (committed ${new Date(idx.commitDate).toLocaleDateString()})` : '';
-    lircIndexStatus.textContent =
-      `${idx.devices.length} devices indexed (LIRC @${rev}${commitAge}), ${idx.misses} files skipped, built ${when}`;
+    lircIndexStatus.textContent = `${idx.devices.length} devices indexed (LIRC @${rev}), ${idx.misses} files skipped, built ${when}`;
     clear(lircIndexSkip);
-    lircIndexSkip.append(
-      el('summary', { text: `${idx.misses} skipped files \u2014 why` }),
-      ...irdbSkipReportText(idx.skipped, idx.misses, idx.devices.length + idx.misses),
-    );
+    lircIndexSkip.append(el('summary', { text: `${idx.misses} skipped files \u2014 why` }));
   }
 
-  // --- assemble sections ----------------------------------------------------
+  // --- assemble -----------------------------------------------------------
 
   const browseControls = el('fieldset', {},
     el('legend', { text: 'Browse devices' }),
-    el('p', { class: 'muted', text: 'Both databases list many entries by controlled device, but LIRC also has a large selection of entries for specific remote control models.' }),
-    el('h3', { class: 'match-head', text: 'IRDB' }),
+    el('p', { class: 'muted', text: 'One picker across both databases. Pick a brand and device; if it exists in both, a short list lets you choose which copy to save.' }),
     el('div', { class: 'row' },
       el('label', { class: 'input-row' }, el('span', { text: 'Brand' }), brandSelect),
       el('label', { class: 'input-row' }, el('span', { text: 'Device' }), modelSelect),
-      irdbCountLabel,
+      countLabel,
     ),
-    irdbStatus,
-    el('h3', { class: 'match-head', text: 'LIRC' }),
-    el('div', { class: 'row' },
-      el('label', { class: 'input-row' }, el('span', { text: 'Brand' }), mfgSelect),
-      el('label', { class: 'input-row' }, el('span', { text: 'Device' }), remoteSelect),
-      lircCountLabel,
-    ),
-    lircStatus,
-    el('p', { class: 'muted', text: 'Click a device to open it for editing, or download its wig directly.' }),
-    irdbResults,
-    lircResults,
+    status,
+    results,
+  );
+
+  const advancedSection = el('fieldset', {},
+    el('legend', { text: 'Advanced' }),
+    advancedToggle,
+    advancedPanel,
   );
 
   const databaseInfoBox = el('fieldset', {},
     el('legend', { text: 'Database information' }),
-    el('p', { class: 'muted', text: 'The device indexes this page browses and matches captures against. They are generated when the site is built and downloaded as single files.' }),
-    el('h3', { class: 'match-head', text: 'IRDB' }),
-    irdbIndexStatus,
-    irdbIndexSkip,
-    el('h3', { class: 'match-head', text: 'LIRC' }),
-    lircIndexStatus,
-    lircIndexSkip,
+    el('h3', { class: 'match-head', text: 'IRDB' }), irdbIndexStatus, irdbIndexSkip,
+    el('h3', { class: 'match-head', text: 'LIRC' }), lircIndexStatus, lircIndexSkip,
   );
 
-  section.append(browseControls);
-  // The database-information block floats below the opened remote editor
-  // rather than sitting between the browse controls and the page bottom. It
-  // shares the editor container's width constraint so it matches the browse
-  // panel instead of spanning the full page.
+  section.append(browseControls, advancedSection);
+
   const databasePanel = el('div', { class: 'remote-panel' });
   databasePanel.append(databaseInfoBox);
   belowPanel.after(databasePanel);
 
-  brandSelect.addEventListener('change', () => {
+  brandSelect.addEventListener('change', () => { refreshModelOptions(); applySelection(); });
+  modelSelect.addEventListener('change', applySelection);
+
+  advancedToggle.addEventListener('click', () => {
+    advancedPanel.hidden = !advancedPanel.hidden;
+    advancedToggle.textContent = advancedPanel.hidden ? 'Advanced: show full tables' : 'Advanced: hide';
+  });
+
+  // Load both indexes, then rebuild the combined picker.
+  status.textContent = 'Loading device indexes\u2026';
+  Promise.allSettled([fetchDeviceList(), fetchLircDeviceList()]).then((res) => {
+    if (res[0].status === 'fulfilled') {
+      irdbDevices = res[0].value.devices;
+    } else {
+      status.className = 'status error';
+      status.textContent = `IRDB index failed: ${(res[0].reason as Error).message}`;
+    }
+    if (res[1].status === 'fulfilled') {
+      lircDevices = res[1].value.devices;
+    } else {
+      status.className = 'status error';
+      status.textContent = `LIRC index failed: ${(res[1].reason as Error).message}`;
+    }
+    rebuildCombined();
+    refreshBrandOptions();
     refreshModelOptions();
-    applyIrdbSelection();
+    applySelection();
+    if (status.className !== 'status error') status.textContent = '';
   });
-  modelSelect.addEventListener('change', applyIrdbSelection);
-  mfgSelect.addEventListener('change', () => {
-    refreshRemoteOptions();
-    applyLircSelection();
-  });
-  remoteSelect.addEventListener('change', applyLircSelection);
+
   void refreshIrdbIndexStatus();
   void refreshLircIndexStatus();
 }
