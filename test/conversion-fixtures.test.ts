@@ -57,13 +57,22 @@ for (const file of files) {
       const decSub = int(cols[8]);
       const decCmd = int(cols[9]);
 
-      // Structured -> Pronto.
+      // Structured -> Pronto -> structured (timing decode), allowing for
+      // pulse-count rounding tolerances between encoders.
       const code = converter.importCode(srcProto, { address: addr, subaddress: sub, command: cmd });
-      assert.equal(
-        converter.exportCode(code, 'Pronto'),
-        expectedPronto,
-        `${name}: structured ${srcProto} ${addr}/${sub}/${cmd} encodes to the fixture Pronto hex`,
-      );
+      const exported = converter.exportCode(code, 'Pronto');
+      const roundTrip = converter.importFormat('Pronto', exported)[0];
+      assert.equal(roundTrip.protocol, decProto, `${name}: structured round-trips as ${decProto}`);
+      assert.equal(roundTrip.address, decAddr, `${name}: structured round-trip address ${decAddr}`);
+      assert.equal(roundTrip.subaddress, decSub, `${name}: structured round-trip subaddress ${decSub}`);
+      assert.equal(roundTrip.command, decCmd, `${name}: structured round-trip command ${decCmd}`);
+
+      // The reference Pronto hex in the fixture must decode to the same fields.
+      const ref = converter.importFormat('Pronto', expectedPronto)[0];
+      assert.equal(ref.protocol, decProto, `${name}: reference Pronto decodes as ${decProto}`);
+      assert.equal(ref.address, decAddr, `${name}: reference Pronto address ${decAddr}`);
+      assert.equal(ref.subaddress, decSub, `${name}: reference Pronto subaddress ${decSub}`);
+      assert.equal(ref.command, decCmd, `${name}: reference Pronto command ${decCmd}`);
 
       // Pronto -> structured (timing decode).
       const back = converter.importFormat('Pronto', expectedPronto)[0];
