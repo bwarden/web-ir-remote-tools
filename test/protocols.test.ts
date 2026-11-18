@@ -7,6 +7,7 @@ import { JvcProtocol } from '../src/lib/protocol/jvc.js';
 import { SamsungProtocol } from '../src/lib/protocol/samsung.js';
 import { Samsung36Protocol } from '../src/lib/protocol/samsung36.js';
 import { PanasonicProtocol } from '../src/lib/protocol/panasonic.js';
+import { PioneerProtocol } from '../src/lib/protocol/pioneer.js';
 import { AiwaProtocol } from '../src/lib/protocol/aiwa.js';
 import { Rc6Protocol } from '../src/lib/protocol/rc6.js';
 
@@ -563,4 +564,15 @@ test('Aiwa round-trips a synthetic frame', () => {
   assert.equal(back.protocol, 'Aiwa');
   assert.equal(back.address, 127);
   assert.equal(back.command, 15);
+});
+
+
+test('Pioneer round-trips a synthetic frame', () => {
+  const proto = new PioneerProtocol();
+  const code = proto.decodeParams({ address: 162, command: 13 });
+  const pronto = converter.exportCode(code, 'Pronto');
+  const back = converter.importFormat('Pronto', pronto)[0];
+  assert.equal(back.protocol, 'Pioneer');
+  assert.equal(back.address, 162);
+  assert.equal(back.command, 13);
 });

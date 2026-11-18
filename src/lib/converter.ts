@@ -61,6 +61,7 @@ import { MwmProtocol } from './protocol/mwm.js';
 import { NecProtocol, Nec2Protocol, Necx1Protocol, Necx2Protocol } from './protocol/nec.js';
 import { Nec48Protocol } from './protocol/nec48.js';
 import { PanasonicProtocol } from './protocol/panasonic.js';
+import { PioneerProtocol } from './protocol/pioneer.js';
 import { Rc5Protocol } from './protocol/rc5.js';
 import { Rc6Protocol } from './protocol/rc6.js';
 import { SamsungProtocol } from './protocol/samsung.js';
@@ -90,6 +91,7 @@ export class Converter {
   private formats: Record<string, FormatHandler> = {};
 
   constructor() {
+    this.registerProtocol(new PioneerProtocol());
     this.registerProtocol(new NecProtocol('NEC'));
     this.registerProtocol(new Nec2Protocol());
     this.registerProtocol(new Nec48Protocol('48-NEC1'));
