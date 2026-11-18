@@ -54,20 +54,20 @@
 
 import { IRCode } from './code.js';
 import type { DecodeParams, ProtocolHandler } from './protocol.js';
-import { NecProtocol, Nec2Protocol, Necx1Protocol, Necx2Protocol } from './protocol/nec.js';
-import { Nec48Protocol } from './protocol/nec48.js';
-import { MwmProtocol } from './protocol/mwm.js';
-import { Rc5Protocol } from './protocol/rc5.js';
-import { Rc6Protocol } from './protocol/rc6.js';
-import { SharpProtocol } from './protocol/sharp.js';
 import { AiwaProtocol } from './protocol/aiwa.js';
 import { JvcProtocol } from './protocol/jvc.js';
 import { Jvc48Protocol } from './protocol/jvc48.js';
+import { MwmProtocol } from './protocol/mwm.js';
+import { NecProtocol, Nec2Protocol, Necx1Protocol, Necx2Protocol } from './protocol/nec.js';
+import { Nec48Protocol } from './protocol/nec48.js';
 import { PanasonicProtocol } from './protocol/panasonic.js';
-import { SonyProtocol } from './protocol/sony.js';
+import { Rc5Protocol } from './protocol/rc5.js';
+import { Rc6Protocol } from './protocol/rc6.js';
 import { SamsungProtocol } from './protocol/samsung.js';
-import { Samsung36Protocol } from './protocol/samsung36.js';
 import { Samsung20Protocol } from './protocol/samsung20.js';
+import { Samsung36Protocol } from './protocol/samsung36.js';
+import { SharpProtocol } from './protocol/sharp.js';
+import { SonyProtocol } from './protocol/sony.js';
 import { ProntoFormat } from './format/pronto.js';
 import { CsvFormat } from './format/csv.js';
 import { CodesCsvFormat } from './format/codesCsv.js';
