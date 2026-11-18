@@ -7,6 +7,7 @@ import { JvcProtocol } from '../src/lib/protocol/jvc.js';
 import { SamsungProtocol } from '../src/lib/protocol/samsung.js';
 import { Samsung36Protocol } from '../src/lib/protocol/samsung36.js';
 import { PanasonicProtocol } from '../src/lib/protocol/panasonic.js';
+import { GicableProtocol } from '../src/lib/protocol/gicable.js';
 import { DishProtocol } from '../src/lib/protocol/dish.js';
 import { PioneerProtocol } from '../src/lib/protocol/pioneer.js';
 import { AiwaProtocol } from '../src/lib/protocol/aiwa.js';
@@ -585,5 +586,15 @@ test('Dish_Network round-trips a synthetic frame', () => {
   const pronto = converter.exportCode(code, 'Pronto');
   const back = converter.importFormat('Pronto', pronto)[0];
   assert.equal(back.protocol, 'Dish_Network');
+  assert.equal(back.command, 5);
+});
+
+
+test('G.I.Cable round-trips a synthetic frame', () => {
+  const proto = new GicableProtocol();
+  const code = proto.decodeParams({ command: 5 });
+  const pronto = converter.exportCode(code, 'Pronto');
+  const back = converter.importFormat('Pronto', pronto)[0];
+  assert.equal(back.protocol, 'G.I.Cable');
   assert.equal(back.command, 5);
 });
