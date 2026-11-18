@@ -10,7 +10,8 @@ const CARRIER = 38000;
 const N_BITS = 15;
 
 export class SharpProtocol implements ProtocolHandler {
-  readonly name = 'DENON';
+  readonly name: string;
+  constructor(name = 'DENON') { this.name = name; }
 
   private pack(address: number, command: number): number {
     return ((address & 0x1f) << 10) | ((command & 0xff) << 2);

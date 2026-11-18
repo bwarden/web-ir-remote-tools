@@ -224,7 +224,7 @@ test('skip report groups files that mix unsupported protocols', () => {
   const mixed = [
     'functionname,protocol,device,subdevice,function',
     'KEY_POWER,PROTON,0,12,1',
-    'KEY_VOLUP,AIWA,0,12,16',
+    'KEY_VOLUP,MCE,0,12,16',
   ].join('\n');
   const idx = buildIrdbIndex(
     sources(['Philips/TV/Combo,00.csv', mixed]),
