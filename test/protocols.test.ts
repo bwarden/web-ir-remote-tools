@@ -7,6 +7,7 @@ import { JvcProtocol } from '../src/lib/protocol/jvc.js';
 import { SamsungProtocol } from '../src/lib/protocol/samsung.js';
 import { Samsung36Protocol } from '../src/lib/protocol/samsung36.js';
 import { PanasonicProtocol } from '../src/lib/protocol/panasonic.js';
+import { AiwaProtocol } from '../src/lib/protocol/aiwa.js';
 import { Rc6Protocol } from '../src/lib/protocol/rc6.js';
 
 const converter = new Converter();
@@ -552,3 +553,14 @@ for (const [name, pronto] of Object.entries(harmonyProntos)) {
     assert.equal(back.command, expectedCommand[name], 'round-trip command');
   });
 }
+
+
+test('Aiwa round-trips a synthetic frame', () => {
+  const proto = new AiwaProtocol();
+  const code = proto.decodeParams({ address: 127, command: 15 });
+  const pronto = converter.exportCode(code, 'Pronto');
+  const back = converter.importFormat('Pronto', pronto)[0];
+  assert.equal(back.protocol, 'Aiwa');
+  assert.equal(back.address, 127);
+  assert.equal(back.command, 15);
+});
