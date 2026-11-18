@@ -59,6 +59,7 @@ import { Nec48Protocol } from './protocol/nec48.js';
 import { MwmProtocol } from './protocol/mwm.js';
 import { Rc5Protocol } from './protocol/rc5.js';
 import { Rc6Protocol } from './protocol/rc6.js';
+import { SharpProtocol } from './protocol/sharp.js';
 import { JvcProtocol } from './protocol/jvc.js';
 import { Jvc48Protocol } from './protocol/jvc48.js';
 import { PanasonicProtocol } from './protocol/panasonic.js';
@@ -106,7 +107,7 @@ export class Converter {
     this.registerProtocol(new MwmProtocol());
     this.registerProtocol(new Rc5Protocol());
     this.registerProtocol(new Rc6Protocol());
-    this.registerProtocol(new Rc6Protocol());
+    this.registerProtocol(new SharpProtocol());
 
     this.registerFormat('Pronto', new ProntoFormat());
     this.registerFormat('CSV', new CsvFormat());
