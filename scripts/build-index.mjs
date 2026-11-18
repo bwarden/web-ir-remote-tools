@@ -216,7 +216,7 @@ async function main() {
     const { skipped } = idx;
     process.stdout.write(
       `  Skipped ${idx.misses} of ${total} files: ${skipped.parseErrors} failed to parse, ` +
-      `${skipped.noSupportedRows} parsed but had no decodable rows — every row used a protocol this build does not support (only the NEC family incl. 48-NEC, JVC incl. JVC-48, Samsung incl. SAMSUNG20/SAMSUNG36 are indexed).\n`,
+      `${skipped.noSupportedRows} parsed but had no decodable rows — every row used a protocol this build does not support (only the NEC family incl. 48-NEC, JVC incl. JVC-48, Samsung incl. SAMSUNG20/SAMSUNG36, Sony, RC5, RC6, and Denon are indexed).\n`,
     );
     const protocols = Object.entries(skipped.singleProtocol).sort((a, b) => b[1] - a[1]);
     if (protocols.length) {
