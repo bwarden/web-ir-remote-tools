@@ -58,6 +58,7 @@ import { AiwaProtocol } from './protocol/aiwa.js';
 import { GicableProtocol } from './protocol/gicable.js';
 import { DishProtocol } from './protocol/dish.js';
 import { JvcProtocol } from './protocol/jvc.js';
+import { MitsubishiProtocol } from './protocol/mitsubishi.js';
 import { Jvc48Protocol } from './protocol/jvc48.js';
 import { MwmProtocol } from './protocol/mwm.js';
 import { NecProtocol, Nec2Protocol, Necx1Protocol, Necx2Protocol } from './protocol/nec.js';
@@ -112,6 +113,7 @@ export class Converter {
     this.registerProtocol(new MwmProtocol());
     this.registerProtocol(new Rc5Protocol());
     this.registerProtocol(new Rc6Protocol());
+    this.registerProtocol(new MitsubishiProtocol());
     this.registerProtocol(new SharpProtocol('DENON'));
     this.registerProtocol(new AiwaProtocol());
     this.registerProtocol(new GicableProtocol());

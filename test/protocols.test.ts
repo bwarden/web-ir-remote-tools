@@ -7,6 +7,7 @@ import { JvcProtocol } from '../src/lib/protocol/jvc.js';
 import { SamsungProtocol } from '../src/lib/protocol/samsung.js';
 import { Samsung36Protocol } from '../src/lib/protocol/samsung36.js';
 import { PanasonicProtocol } from '../src/lib/protocol/panasonic.js';
+import { MitsubishiProtocol } from '../src/lib/protocol/mitsubishi.js';
 import { GicableProtocol } from '../src/lib/protocol/gicable.js';
 import { DishProtocol } from '../src/lib/protocol/dish.js';
 import { PioneerProtocol } from '../src/lib/protocol/pioneer.js';
@@ -597,4 +598,26 @@ test('G.I.Cable round-trips a synthetic frame', () => {
   const back = converter.importFormat('Pronto', pronto)[0];
   assert.equal(back.protocol, 'G.I.Cable');
   assert.equal(back.command, 5);
+});
+
+
+test('Mitsubishi round-trips a synthetic frame', () => {
+  const proto = new MitsubishiProtocol();
+  const code = proto.decodeParams({ address: 119, command: 192 });
+  const pronto = converter.exportCode(code, 'Pronto');
+  const back = converter.importFormat('Pronto', pronto)[0];
+  assert.equal(back.protocol, 'Mitsubishi');
+  assert.equal(back.address, 119);
+  assert.equal(back.command, 192);
+});
+
+
+test('Mitsubishi round-trips a synthetic frame', () => {
+  const proto = new MitsubishiProtocol();
+  const code = proto.decodeParams({ address: 119, command: 192 });
+  const pronto = converter.exportCode(code, 'Pronto');
+  const back = converter.importFormat('Pronto', pronto)[0];
+  assert.equal(back.protocol, 'Mitsubishi');
+  assert.equal(back.address, 119);
+  assert.equal(back.command, 192);
 });
