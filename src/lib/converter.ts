@@ -94,6 +94,12 @@ export class Converter {
   private formats: Record<string, FormatHandler> = {};
 
   constructor() {
+    // DECODE ORDER MATTERS: protocols are tried in registration order, and
+    // a later protocol whose timing is a subset of an earlier one will never
+    // match. Register more specific / longer frames first (Pioneer before NEC,
+    // Mitsubishi before Denon, Denon before Sharp). Derivative protocols that
+    // share a timing signature (NECX1/NECX2 -> SAMSUNG, NEC2 -> NEC) rely on
+    // this ordering for correct identification.
     this.registerProtocol(new PioneerProtocol());
     this.registerProtocol(new NecProtocol('NEC'));
     this.registerProtocol(new Nec2Protocol());
