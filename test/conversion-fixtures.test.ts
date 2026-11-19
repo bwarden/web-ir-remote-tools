@@ -44,7 +44,7 @@ for (const file of files) {
       if (line.trim() === '' || /^\s*#/.test(line)) continue;
       rows++;
       const cols = line.split('\t');
-      assert.equal(cols.length, 10, `row ${rows} has 10 columns`);
+      assert.equal(cols.length, 12, `row ${rows} has 12 columns`);
 
       const name = cols[0];
       const srcProto = cols[1];

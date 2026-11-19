@@ -55,8 +55,8 @@
 import { IRCode } from './code.js';
 import type { DecodeParams, ProtocolHandler } from './protocol.js';
 import { AiwaProtocol } from './protocol/aiwa.js';
-import { GicableProtocol } from './protocol/gicable.js';
 import { DishProtocol } from './protocol/dish.js';
+import { GicableProtocol } from './protocol/gicable.js';
 import { JvcProtocol } from './protocol/jvc.js';
 import { MitsubishiProtocol } from './protocol/mitsubishi.js';
 import { Jvc48Protocol } from './protocol/jvc48.js';
@@ -115,8 +115,8 @@ export class Converter {
     this.registerProtocol(new Rc6Protocol());
     this.registerProtocol(new MitsubishiProtocol());
     this.registerProtocol(new SharpProtocol('DENON'));
+    this.registerProtocol(new SharpProtocol('SHARP'));
     this.registerProtocol(new AiwaProtocol());
-    this.registerProtocol(new GicableProtocol());
     this.registerProtocol(new GicableProtocol());
     this.registerProtocol(new DishProtocol());
     this.registerProtocol(new SharpProtocol('DENON-K'));

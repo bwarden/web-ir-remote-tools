@@ -561,7 +561,7 @@ test('conv-samsung.tsv Mute fixture roundtrips', () => {
   assert.ok(muteLine, 'MUTE row found in conv-samsung.tsv');
 
   const cols = muteLine.split('\t');
-  assert.equal(cols.length, 10, '10 columns');
+  assert.equal(cols.length, 12, '12 columns');
   assert.equal(cols[0], 'MUTE');
   assert.equal(cols[1], 'SAMSUNG');
   assert.equal(cols[2], '224'); // 0xE0

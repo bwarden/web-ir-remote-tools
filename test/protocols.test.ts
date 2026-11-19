@@ -7,6 +7,7 @@ import { JvcProtocol } from '../src/lib/protocol/jvc.js';
 import { SamsungProtocol } from '../src/lib/protocol/samsung.js';
 import { Samsung36Protocol } from '../src/lib/protocol/samsung36.js';
 import { PanasonicProtocol } from '../src/lib/protocol/panasonic.js';
+import { SharpProtocol } from '../src/lib/protocol/sharp.js';
 import { MitsubishiProtocol } from '../src/lib/protocol/mitsubishi.js';
 import { GicableProtocol } from '../src/lib/protocol/gicable.js';
 import { DishProtocol } from '../src/lib/protocol/dish.js';
@@ -620,4 +621,15 @@ test('Mitsubishi round-trips a synthetic frame', () => {
   assert.equal(back.protocol, 'Mitsubishi');
   assert.equal(back.address, 119);
   assert.equal(back.command, 192);
+});
+
+
+test('SHARP round-trips a synthetic frame', () => {
+  const proto = new SharpProtocol('SHARP');
+  const code = proto.decodeParams({ address: 1, command: 1 });
+  const pronto = converter.exportCode(code, 'Pronto');
+  const back = converter.importFormat('Pronto', pronto)[0];
+  assert.equal(back.protocol, 'DENON');
+  assert.equal(back.address, 1);
+  assert.equal(back.command, 1);
 });
